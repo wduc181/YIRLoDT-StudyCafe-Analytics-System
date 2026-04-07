@@ -1,6 +1,6 @@
 # Requirement Analysis Document
 ## StudyCafe Analytics System
-**Phiên bản:** v0.2  
+**Phiên bản:** v0.3
 **Ngày cập nhật:** 07/04/2026  
 
 ---
@@ -52,11 +52,9 @@ Trong phạm vi đồ án, hệ thống cần:
 
 | Vai trò | Người phụ trách | Trách nhiệm chính |
 |---|---|---|
-| Tech Lead | Võ Viết Đức | Điều phối hệ thống, frontend, backend, tích hợp |
-| Backend / Frontend | Võ Viết Đức | Xây API, giao diện web, database, deploy |
+| Backend / Frontend | Võ Viết Đức | Xây API, giao diện web, database, deploy, tích hợp |
 | Scoring / Logic | Hà Hoàng Long | Thiết kế logic nhận diện hành vi và tính điểm |
-| Data Processing / Export | Nguyễn Anh Tú | Lọc nhiễu dữ liệu GPS, xử lý dữ liệu, export Excel |
-| Mentor | Giảng viên hướng dẫn | Góp ý giải pháp, review hướng tiếp cận |
+| Data Processing / Export  / Scoring| Nguyễn Anh Tú | Xử lí cách tính điểm, lọc nhiễu dữ liệu GPS, xử lý dữ liệu, export Excel |
 
 ---
 
@@ -73,6 +71,9 @@ Trong phạm vi đồ án, hệ thống cần:
 - Thời gian triển khai ngắn.
 - Ưu tiên công nghệ đơn giản, dễ tích hợp.
 - Hệ thống cần đủ rõ ràng để các module có thể làm song song.
+- [OPTIONAL] Google Places API Key cần được cấp phát trước khi triển khai
+  tính năng FR-B8 và FR-A7.
+- [OPTIONAL]Free tier của Google Places đủ dùng cho mục đích demo.
 
 ---
 
@@ -174,6 +175,15 @@ Trong khi session đang hoạt động, hệ thống phải gửi dữ liệu GP
 ### FR-A5 — Hiển thị trạng thái session
 Frontend phải hiển thị rõ trạng thái hiện tại: chưa bắt đầu, đang tracking, đã kết thúc.
 
+### FR-A6 — Hiển thị quán gần nhất [Optional]
+Khi user vào màn danh sách quán, hệ thống lấy GPS hiện tại và hiển thị
+các quán gần nhất theo khoảng cách thực tế, bên cạnh đó là rating và link dẫn ra google map của quán.
+
+### FR-A7 — Giao diện đề xuất quán mới [Optional]
+Frontend cung cấp ô tìm kiếm tên quán tích hợp Google Places
+Autocomplete. Khi user chọn một địa điểm từ gợi ý, hệ thống tự
+điền tọa độ và gửi lên backend để tạo quán ở trạng thái pending.
+
 ---
 
 ## 6.2 Module B — Backend API & Data Storage
@@ -196,6 +206,17 @@ Backend phải có cơ chế truy xuất dữ liệu GPS/session để đưa san
 ### FR-B6 — Hỗ trợ mock data
 Backend phải cho phép nạp dữ liệu GPS giả lập để kiểm thử và demo.
 
+### FR-B7 — API tìm quán gần nhất [Optional]
+Backend cung cấp endpoint nhận tọa độ GPS của user và trả về danh sách
+quán được sắp xếp theo khoảng cách tăng dần, kèm điểm đánh giá của hệ thống và
+Google Maps URL.
+
+### FR-B8 — Cho phép user đề xuất thêm quán mới [Optional]
+User có thể submit một quán chưa có trong hệ thống thông qua Google
+Places Autocomplete. Hệ thống lấy tọa độ chính xác từ Google, quán
+mới sẽ ở trạng thái `pending` cho đến khi admin kích hoạt.
+
+Phụ thuộc: Google Places API Key.
 ---
 
 ## 6.3 Module C — Scoring Engine
@@ -335,3 +356,6 @@ Sau RA v0.2, bộ tài liệu dự kiến gồm:
 - Tách requirement hệ thống khỏi chi tiết implementation
 - Tách riêng module Scoring Engine để phục vụ tài liệu model riêng
 - Phù hợp hơn với dự án nhóm 3 người, scope mock data, thời gian 1 tháng
+
+## v0.3
+- Thêm 1 số chức năng optional 
