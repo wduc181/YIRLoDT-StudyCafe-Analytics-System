@@ -1,403 +1,337 @@
 # Requirement Analysis Document
-**Dự án:** StudyCafe Analytic System 
-**Phụ đề:** Hệ thống đánh giá địa điểm học tập qua hành vi GPS
-**Thời gian triển khai:** 1 tháng (4 tuần)  
-**Phiên bản tài liệu:** 0.1
-
-**Lần cuối chỉnh sửa:** 05/04/2026  
+## StudyCafe Analytics System
+**Phiên bản:** v0.2  
+**Ngày cập nhật:** 07/04/2026  
 
 ---
 
-## 1. MỤC TIÊU DỰ ÁN (Project Goals)
+# 1. Tổng quan dự án
 
-Xây dựng một hệ thống đánh giá **khách quan** chất lượng các địa điểm học tập (Quán Cafe, Thư viện) dựa trên **hành vi thực tế** của người dùng thay vì dựa vào review chủ quan.
+## 1.1 Tên dự án
+**StudyCafe Analytics System** — Hệ thống đánh giá địa điểm học tập qua hành vi GPS.
 
-### Vấn đề cần giải quyết
-| Vấn đề hiện tại | Giải pháp của StudyCafe Analytics |
-|---|---|
-| Review sao trên Google Maps mang tính chủ quan | Đánh giá dựa trên dữ liệu hành vi thực tế (GPS) |
-| Không biết quán nào thực sự phù hợp để học | Tính điểm dựa trên thời gian lưu trú thực tế |
-| Không có dữ liệu tổng hợp để so sánh các quán | Báo cáo Excel xuất ra từ dữ liệu thật |
+## 1.2 Bối cảnh
+Người dùng hiện thường chọn quán cafe hoặc địa điểm học tập dựa trên review chủ quan. Tuy nhiên, các review này có thể mang tính cảm tính, không phản ánh đúng việc địa điểm đó có thực sự phù hợp để học tập hay không.
 
-### Phạm vi (Scope)
-- Địa điểm: Quán Cafe (3–5 quán mẫu hardcode)
-- Nền tảng: Mobile Web / PWA (không cần cài app)
-- Người dùng: Demo nội bộ (3 thành viên nhóm)
-- Tính năng thêm (optional): Đăng nhập/đăng ký, bình luận chủ quan, bản đồ tương tác
+## 1.3 Mục tiêu dự án
+Xây dựng một hệ thống có khả năng đánh giá mức độ phù hợp của địa điểm học tập dựa trên **hành vi thực tế của người dùng**, chủ yếu thông qua dữ liệu GPS và thời gian lưu trú, thay vì phụ thuộc hoàn toàn vào review thủ công.
+
+## 1.4 Mục tiêu demo
+Trong phạm vi đồ án, hệ thống cần:
+- Cho phép người dùng mở web trên điện thoại và bắt đầu một phiên học tập.
+- Thu thập dữ liệu GPS định kỳ trong suốt phiên.
+- Xử lý dữ liệu để suy ra hành vi học tập.
+- Tính điểm hành vi cho từng quán cafe mẫu.
+- Xuất báo cáo tổng hợp ra file Excel.
 
 ---
 
-## 2. KIẾN TRÚC HỆ THỐNG (System Architecture)
+# 2. Phạm vi dự án
 
-```
-┌─────────────────────────────────────────────────────┐
-│                  CLIENT (Mobile Web)                │
-│                       ReactJS                       │
-│     HTML5 Geolocation API → gửi GPS mỗi 60 giây     │
-└────────────────────────┬────────────────────────────┘
-                         │ HTTPS POST /api/tracking
-                         ▼
-┌─────────────────────────────────────────────────────┐
-│                BACKEND API SERVER                   │
-│                 FastAPI (Python)                    │
-│  ┌──────────────────┐   ┌────────────────────────┐  │
-│  │   REST API Layer │   │   Scoring Engine       │  │
-│  │POST /api/tracking│   │  (Python: Pandas/Numpy)│  │
-│  │GET /api/report/* │   │  Noise Filter + Score  │  │
-│  └──────────────────┘   └────────────────────────┘  │
-└────────────────────────┬────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────┐
-│               DATABASE (PostgreSQL)                 │
-│        Time-series GPS data storage                 │
-│    gps_logs | cafes | sessions | score_results      │
-└─────────────────────────────────────────────────────┘
-                         │
-                   Docker Compose
-```
+## 2.1 Trong phạm vi
+- Xây dựng hệ thống dạng **Mobile Web/PWA**.
+- Thu thập GPS từ trình duyệt điện thoại.
+- Lưu dữ liệu GPS theo session.
+- Quản lý danh sách quán cafe mẫu.
+- Xử lý dữ liệu GPS để phục vụ đánh giá hành vi.
+- Tính điểm đánh giá quán dựa trên hành vi.
+- Xuất báo cáo dạng `.xlsx`.
+- Hỗ trợ **mock data** để demo và kiểm thử.
 
-### Tech Stack tổng hợp
-| Layer | Công nghệ | Ghi chú |
+## 2.2 Ngoài phạm vi
+- Đăng nhập/đăng ký người dùng hoàn chỉnh.
+- Tích hợp thanh toán, loyalty, notification.
+- Review chủ quan dạng sao/bình luận là chức năng bắt buộc.
+- Bản đồ tương tác phức tạp.
+- Phát hành ứng dụng native trên App Store / Google Play.
+- Bảo mật production-level như JWT, OAuth, RBAC đầy đủ.
+
+---
+
+# 3. Các bên liên quan
+
+| Vai trò | Người phụ trách | Trách nhiệm chính |
 |---|---|---|
-| Frontend | ReactJS | Tối ưu mobile, không cần framework nặng |
-| Backend API | FastAPI (Python) | Ưu tiên — tích hợp tốt với Pandas |
-| Database | PostgreSQL | Lưu time-series GPS, dễ query theo thời gian |
-| Scoring Engine | Python (Pandas, Numpy) | Tích hợp thẳng vào Backend |
-| Deployment | Docker Compose | |
-| Export | openpyxl / xlsxwriter | Xuất file .xlsx |
+| Tech Lead | Võ Viết Đức | Điều phối hệ thống, frontend, backend, tích hợp |
+| Backend / Frontend | Võ Viết Đức | Xây API, giao diện web, database, deploy |
+| Scoring / Logic | Hà Hoàng Long | Thiết kế logic nhận diện hành vi và tính điểm |
+| Data Processing / Export | Nguyễn Anh Tú | Lọc nhiễu dữ liệu GPS, xử lý dữ liệu, export Excel |
+| Mentor | Giảng viên hướng dẫn | Góp ý giải pháp, review hướng tiếp cận |
 
 ---
 
-## 3. YÊU CẦU CHỨC NĂNG (Functional Requirements)
+# 4. Giả định và ràng buộc
 
-### 3.1 Module Frontend — Thiết bị người dùng
+## 4.1 Giả định
+- GPS trên điện thoại **không có độ chính xác cao tuyệt đối**.
+- Mock data được chấp nhận trong quá trình demo và test.
+- Nhóm được tự đề xuất công thức hoặc mô hình đánh giá hành vi.
+- Dự án được ưu tiên tính khả thi và khả năng demo trong 1 tháng.
 
-#### FR1 — Cấp quyền GPS
-- **Mô tả:** Giao diện yêu cầu người dùng cho phép truy cập vị trí qua HTML5 Geolocation API
-- **Input:** Hành động người dùng (bấm "Cho phép" trên trình duyệt)
-- **Output:** `navigator.geolocation` được cấp quyền, tọa độ đầu tiên được lấy
-- **Điều kiện lỗi:** Người dùng từ chối → Hiển thị thông báo hướng dẫn bật lại
-
-#### FR2 — Bắt đầu / Kết thúc Session
-- **Mô tả:** Nút bấm để bắt đầu và kết thúc một phiên học tập
-- **Input:** Sự kiện click của người dùng
-- **Output:** Tạo `session_id` mới, ghi `start_time` / `end_time` vào DB
-- **UI:** Nút "Bắt đầu học" → đổi thành "Kết thúc" (kèm đồng hồ đếm giờ hiển thị)
-
-#### FR3 — Tracking GPS ngầm
-- **Mô tả:** Khi đang trong session, trình duyệt tự động gửi tọa độ về Backend
-- **Interval:** Mỗi **60 giây** / lần
-- **Chống trùng khi retry:** Client gửi lại request nếu không nhận response trong 5s. Server dùng UNIQUE constraint `(session_id, device_id, timestamp)` để reject duplicate — trả về 200 OK với `log_id` của bản ghi đã tồn tại.
-- **Payload gửi lên:**
-```json
-{
-  "device_id": "uuid-xxxx",
-  "session_id": "uuid-yyyy",
-  "lat": 21.0285,
-  "lng": 105.8542,
-  "accuracy": 15.0,
-  "timestamp": "2026-04-05T14:30:00Z"
-}
-```
-- **Điều kiện dừng:** Người dùng bấm "Kết thúc" hoặc đóng tab
+## 4.2 Ràng buộc
+- Nhóm chỉ có 3 người.
+- Thời gian triển khai ngắn.
+- Ưu tiên công nghệ đơn giản, dễ tích hợp.
+- Hệ thống cần đủ rõ ràng để các module có thể làm song song.
 
 ---
 
-### 3.2 Module Backend — API & Database
+# 5. Phân rã hệ thống theo module
 
-#### FR4 — Ingest Data GPS
-- **Endpoint:** `POST /api/tracking`
-- **Mô tả:** Nhận luồng data GPS liên tục, ghi vào bảng `gps_logs`
-- **Hiệu năng:** Chấp nhận nhiều request đồng thời (async FastAPI)
-- **Response:**
-```json
-{ "status": "ok", "log_id": 12345 }
-```
+Hệ thống được chia thành 4 module chính để dễ phân công và phát triển song song.
 
-#### FR5 — Master Data Quán Cafe
-- **Mô tả:** Bảng `cafes` lưu danh sách quán mẫu (hardcode 3–5 quán)
-- **Cấu trúc dữ liệu:**
+## 5.1 Module A — Frontend Tracking
 
-| Trường | Kiểu | Mô tả |
+### Mục tiêu
+Cung cấp giao diện mobile web đơn giản để người dùng:
+- cấp quyền GPS,
+- bắt đầu/kết thúc phiên học tập,
+- gửi dữ liệu vị trí định kỳ lên backend.
+
+### Đầu vào
+- Tương tác người dùng.
+- Dữ liệu GPS từ trình duyệt.
+
+### Đầu ra
+- Session được tạo/kết thúc.
+- Tọa độ GPS được gửi định kỳ về server.
+
+---
+
+## 5.2 Module B — Backend API & Data Storage
+
+### Mục tiêu
+Xây dựng backend tiếp nhận dữ liệu GPS, quản lý session, lưu database và cung cấp dữ liệu cho các module xử lý.
+
+### Đầu vào
+- GPS logs từ frontend.
+- Yêu cầu export báo cáo.
+- Yêu cầu truy xuất danh sách quán.
+
+### Đầu ra
+- Dữ liệu GPS lưu trong DB.
+- Dữ liệu session có thể truy vấn lại.
+- Dữ liệu sạch để chuyển cho Scoring Engine.
+- File Excel báo cáo (thông qua module báo cáo).
+
+---
+
+## 5.3 Module C — Scoring Engine
+
+### Mục tiêu
+Phân tích dữ liệu GPS theo session để:
+- lọc nhiễu,
+- phát hiện hành vi có khả năng là “đang học”,
+- tính toán điểm hành vi cho từng địa điểm.
+
+### Ghi chú
+Module này **không mô tả chi tiết thuật toán trong file này**.  
+Chi tiết thiết kế model, pipeline, cách train, input/output sẽ được mô tả trong tài liệu riêng:
+- `scoring_engine_design.md`
+
+### Đầu vào ở mức hệ thống
+- Danh sách GPS logs theo session.
+- Thông tin quán cafe mẫu.
+- Metadata của session.
+
+### Đầu ra ở mức hệ thống
+- Kết quả đánh dấu session có/không mang tính học tập.
+- Các chỉ số tổng hợp của session.
+- Điểm hành vi theo quán.
+
+---
+
+## 5.4 Module D — Reporting / Export
+
+### Mục tiêu
+Tổng hợp dữ liệu đã xử lý và xuất báo cáo dạng Excel để phục vụ demo và đối chiếu kết quả.
+
+### Đầu vào
+- Kết quả scoring theo quán.
+- Dữ liệu tổng hợp về số lượt đến, thời gian trung bình, tỷ lệ rời sớm.
+
+### Đầu ra
+- File `.xlsx` chứa báo cáo tổng hợp.
+
+---
+
+# 6. Yêu cầu chức năng theo module
+
+## 6.1 Module A — Frontend Tracking
+
+### FR-A1 — Cấp quyền GPS
+Hệ thống phải yêu cầu người dùng cấp quyền truy cập vị trí khi bắt đầu sử dụng.
+
+### FR-A2 — Bắt đầu session
+Hệ thống phải cho phép người dùng bắt đầu một phiên học tập bằng nút bấm.
+
+### FR-A3 — Kết thúc session
+Hệ thống phải cho phép người dùng kết thúc phiên học tập bằng nút bấm.
+
+### FR-A4 — Gửi GPS định kỳ
+Trong khi session đang hoạt động, hệ thống phải gửi dữ liệu GPS định kỳ về backend.
+
+### FR-A5 — Hiển thị trạng thái session
+Frontend phải hiển thị rõ trạng thái hiện tại: chưa bắt đầu, đang tracking, đã kết thúc.
+
+---
+
+## 6.2 Module B — Backend API & Data Storage
+
+### FR-B1 — Nhận GPS logs
+Backend phải có API nhận dữ liệu GPS từ frontend theo thời gian thực hoặc gần thời gian thực.
+
+### FR-B2 — Quản lý session
+Backend phải tạo và kết thúc session tương ứng với thao tác của người dùng.
+
+### FR-B3 — Lưu trữ GPS logs
+Backend phải lưu dữ liệu GPS theo session để phục vụ xử lý sau.
+
+### FR-B4 — Quản lý danh sách quán cafe
+Backend phải lưu được danh sách quán cafe mẫu với thông tin vị trí trung tâm và bán kính nhận diện.
+
+### FR-B5 — Cung cấp dữ liệu cho scoring engine
+Backend phải có cơ chế truy xuất dữ liệu GPS/session để đưa sang module Scoring Engine.
+
+### FR-B6 — Hỗ trợ mock data
+Backend phải cho phép nạp dữ liệu GPS giả lập để kiểm thử và demo.
+
+---
+
+## 6.3 Module C — Scoring Engine
+
+### FR-C1 — Lọc nhiễu dữ liệu GPS
+Hệ thống phải có cơ chế xác định và loại bỏ hoặc đánh dấu các điểm GPS bất thường.
+
+### FR-C2 — Phát hiện hành vi “đang học”
+Hệ thống phải xác định được một session có đủ dấu hiệu để xem là hành vi học tập hay không.
+
+### FR-C3 — Tính đặc trưng hành vi
+Hệ thống phải trích xuất được các đặc trưng cần thiết từ GPS/session để phục vụ đánh giá.
+
+### FR-C4 — Tính điểm quán
+Hệ thống phải tính được điểm hành vi cho từng quán cafe dựa trên dữ liệu các session.
+
+### FR-C5 — Trả kết quả cho backend
+Scoring Engine phải trả kết quả ở dạng có thể tích hợp lại vào backend và reporting.
+
+---
+
+## 6.4 Module D — Reporting / Export
+
+### FR-D1 — Tổng hợp số liệu theo quán
+Hệ thống phải tính được các chỉ số tổng hợp theo từng quán.
+
+### FR-D2 — Xuất Excel
+Hệ thống phải xuất được báo cáo dưới dạng file Excel.
+
+### FR-D3 — Hiển thị trạng thái thiếu dữ liệu
+Nếu dữ liệu chưa đủ để đánh giá, hệ thống phải thể hiện rõ trạng thái “chưa đủ dữ liệu” thay vì đưa ra điểm sai lệch.
+
+---
+
+# 7. Yêu cầu phi chức năng
+
+## 7.1 Tính khả dụng
+- Hệ thống chạy được trên trình duyệt điện thoại phổ biến như Chrome và Safari.
+- Người dùng không cần cài app native.
+
+## 7.2 Hiệu năng
+- API nhận GPS phải phản hồi đủ nhanh để phục vụ demo nhóm nhỏ.
+- Hệ thống phải hoạt động ổn định với quy mô demo 3 người dùng đồng thời.
+
+## 7.3 Khả năng bảo trì
+- Hệ thống phải được chia module rõ ràng để từng thành viên có thể làm việc độc lập.
+- Contract giữa backend và scoring engine cần được định nghĩa tách biệt.
+
+## 7.4 Độ tin cậy dữ liệu
+- Hệ thống phải chấp nhận GPS có sai số nhất định.
+- Cần có cơ chế làm việc với mock data và dữ liệu thực song song.
+
+## 7.5 Tính triển khai
+- Hệ thống nên đóng gói được bằng Docker Compose để chạy nhanh trên máy local hoặc server demo.
+
+---
+
+# 8. Dữ liệu nghiệp vụ chính
+
+## 8.1 Thực thể chính
+- **Cafe**: thông tin quán cafe mẫu
+- **Session**: một phiên học tập của người dùng
+- **GPS Log**: một điểm dữ liệu vị trí theo thời gian
+- **Cafe Score**: kết quả đánh giá hành vi của một quán
+
+## 8.2 Quan hệ dữ liệu mức nghiệp vụ
+- Một **Cafe** có thể có nhiều **Session**
+- Một **Session** có nhiều **GPS Log**
+- Một **Cafe** có thể có một hoặc nhiều bản ghi **Cafe Score** theo từng lần tính toán
+
+> Chi tiết schema database sẽ được mô tả trong tài liệu thiết kế/API, không chốt hoàn toàn trong RA v0.2.
+
+---
+
+# 9. Phụ thuộc giữa các module
+
+| Module | Phụ thuộc vào | Ghi chú |
 |---|---|---|
-| `cafe_id` | UUID / INT | Khóa chính |
-| `name` | VARCHAR | Tên quán |
-| `address` | TEXT | Địa chỉ |
-| `center_lat` | FLOAT | Vĩ độ trung tâm |
-| `center_lng` | FLOAT | Kinh độ trung tâm |
-| `radius_m` | INT | Bán kính nhận dạng (mặc định: 50m) |
+| Frontend Tracking | Backend API | Gửi GPS, tạo session |
+| Backend API | Database | Lưu và truy xuất dữ liệu |
+| Scoring Engine | Backend + Database | Lấy dữ liệu session/GPS |
+| Reporting | Backend + Scoring Engine | Dùng kết quả scoring để xuất báo cáo |
 
 ---
 
-### 3.3 Module Scoring Engine — Xử lý dữ liệu & Đánh giá
+# 10. Milestones dự kiến
 
-#### FR6 — Lọc nhiễu GPS (Noise Filtering)
+## Tuần 1 — Chốt requirement và contract
+- Hoàn thiện tài liệu requirement
+- Chốt cách chia module
+- Chốt input/output giữa backend và scoring engine
+- Dựng skeleton backend/frontend
+- Chuẩn bị mock data
 
-- **Mô tả:** Loại bỏ các điểm GPS bị nhảy sai lệch bất thường (GPS jitter)
-- **Tiêu chí lọc:**
-  - Điểm có `accuracy > 50m` → đánh dấu nghi ngờ
-  - Tốc độ di chuyển tính từ 2 điểm liên tiếp `> 5 m/s` (18 km/h) → nhiễu (người học không di chuyển nhanh)
-  - Áp dụng **rolling median** trên cửa sổ 3–5 điểm để làm mượt tọa độ
-- **Input:** Raw GPS log của 1 session (list các điểm lat/lng/timestamp)
-- **Output:** Cleaned GPS log (đã loại điểm nhiễu)
+## Tuần 2 — Hoàn thiện pipeline cơ bản
+- Frontend gửi được GPS
+- Backend lưu được session và logs
+- Module scoring có skeleton input/output
 
-#### FR7 — Nhận diện hành vi "Đang học"
+## Tuần 3 — Tích hợp và test
+- Tích hợp scoring engine với backend
+- Chạy thử bằng mock data và test thực tế
+- Hoàn thiện export Excel
 
-- **Mô tả:** Xác định người dùng đang "ngồi im" trong bán kính quán cafe
-- **Điều kiện nhận diện:**
-  - Tọa độ nằm trong bán kính **50m** tính từ `center_lat/lng` của quán
-  - Tọa độ xê dịch không quá **20m** trong ít nhất **30 phút** liên tục
-- **Công thức khoảng cách:** Haversine formula
-- **Output:** `is_studying: true/false` + `stable_duration_minutes` cho mỗi session
-- **Tiêu chí chấp nhận đo được:**
-  - Precision ≥ 85% (trong các session được đánh dấu `is_studying=true`, ≥85% thực sự đang học)
-  - Recall ≥ 80% (trong tổng số session học thực tế, ≥80% được nhận diện đúng)
-  - Kiểm tra bằng bộ dữ liệu test gồm 50 session có ground truth label
-
-#### FR8 — Công thức tính điểm (Scoring Formula)
-
-- **Mô tả:** Tính điểm tổng hợp cho từng quán cafe dựa trên hành vi người dùng
-- **Công thức gợi ý (cần review & điều chỉnh):**
-
-```
-Score_raw = (W1 × AvgDuration_normalized) - (W2 × DropoffRate) + (W3 × ReturnRate)
-
-Trong đó:
-  AvgDuration_normalized = min(avg_session_minutes / 120, 1.0)  (chuẩn hóa về [0,1], cap tại 2 giờ)
-  DropoffRate            = số session < 15 phút / tổng session
-  ReturnRate             = số user quay lại ≥ 2 lần / tổng user unique
-  W1 = 0.5, W2 = 0.3, W3 = 0.2  (trọng số — Long điều chỉnh)
-
-Chuẩn hóa cuối (đảm bảo Score ∈ [0, 1]):
-  Score = max(0, min(1, Score_raw))
-
-Xử lý mẫu nhỏ (tránh bias khi ít dữ liệu):
-  - Nếu total_sessions < 5: Score = NULL (chưa đủ dữ liệu)
-  - Nếu total_unique_users < 3: ReturnRate = 0 (không tính factor này)
-```
-
-- **Thang điểm:** 0.0 – 1.0 (hoặc nhân 10 để ra 0–10)
-- **NOTE** *"Xem phần FR8, nghĩ thử công thức Toán học nào hợp lý hơn không? Có thể thêm factor về độ ổn định tọa độ (standard deviation lat/lng) vào công thức không?"*
+## Tuần 4 — Ổn định và demo
+- Fix bug
+- Đóng gói hệ thống
+- Chuẩn bị slide và demo mentor
 
 ---
 
-### 3.4 Module Báo cáo Admin
+# 11. Tiêu chí hoàn thành mức requirement
 
-#### FR9 — Export Excel
-
-- **Endpoint:** `GET /api/report/export`
-- **Output:** File `.xlsx` tải về trực tiếp
-- **Cấu trúc file Excel:**
-
-| Tên quán | Địa chỉ | Tổng lượt đến | Thời gian TB (phút) | Tỷ lệ drop-off (%) | Điểm hành vi |
-|---|---|---|---|---|---|
-| Cafe A | 123 Phố X | 42 | 87 | 12% | 8.3 |
-| Cafe B | 456 Phố Y | 28 | 34 | 41% | 4.1 |
-
-- **NOTE** *"Thiết kế giúp cấu trúc các cột cho bảng `gps_logs` trong PostgreSQL để tiện query và xử lý Pandas nhất. Đặc biệt cần nghĩ về index theo `session_id` và `timestamp` để query time-series nhanh."*
+Tài liệu requirement được xem là đạt mức có thể chuyển sang thiết kế/implementation khi:
+- Scope đã rõ.
+- Module đã tách rõ owner.
+- Biết module nào cần input gì và output gì ở mức hệ thống.
+- Không còn lẫn giữa requirement và implementation detail.
+- Có chỗ riêng để nhóm AI/scoring tự mô tả giải pháp.
 
 ---
 
-## 4. YÊU CẦU PHI CHỨC NĂNG (Non-Functional Requirements)
+# 12. Các tài liệu liên quan
 
-| # | Yêu cầu | Mô tả chi tiết |
-|---|---|---|
-| NFR1 | **Khả dụng (Accessibility)** | Chạy trên Safari/Chrome mobile, không cần cài app |
-| NFR2 | **Bảo mật (Security)** | Dùng `device_id` (random UUID) thay JWT để tiết kiệm thời gian — chấp nhận cho demo |
-| NFR3 | **Hiệu năng (Performance)** | API `/tracking` response < 500ms dưới tải 10 concurrent requests/giây; tracking interval 60s không làm hao pin |
-| NFR4 | **Độ tin cậy GPS** | Chấp nhận sai số GPS thực tế của điện thoại (~5–20m) |
-| NFR5 | **Khả năng triển khai** | Docker Compose 1 lệnh `docker-compose up` là chạy được toàn bộ |
+Sau RA v0.2, bộ tài liệu dự kiến gồm:
+- `requirement_analysis.md`
+- `api_design.md`
+- `ui_flow.md`
+- `scoring_engine_design.md`
 
 ---
 
-## 5. CẤU TRÚC DATABASE (Database Schema)
+# 13. Ghi chú phiên bản
 
-### Bảng `cafes` 
-```sql
-CREATE TABLE cafes (
-    cafe_id     SERIAL PRIMARY KEY,
-    name        VARCHAR(255) NOT NULL,
-    address     TEXT,
-    center_lat  DOUBLE PRECISION NOT NULL,
-    center_lng  DOUBLE PRECISION NOT NULL,
-    radius_m    INTEGER DEFAULT 50
-);
-```
-
-### Bảng `sessions` (Quản lý phiên học)
-```sql
-CREATE TABLE sessions (
-    session_id  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    device_id   VARCHAR(64) NOT NULL,
-    cafe_id     INTEGER REFERENCES cafes(cafe_id),
-    start_time  TIMESTAMPTZ NOT NULL,
-    end_time    TIMESTAMPTZ,
-    duration_min FLOAT  -- Tính khi kết thúc session
-);
-```
-
-### Bảng `gps_logs` (Time-series GPS)
-```sql
-CREATE TABLE gps_logs (
-    log_id      BIGSERIAL PRIMARY KEY,
-    session_id  UUID REFERENCES sessions(session_id),
-    device_id   VARCHAR(64),
-    lat         DOUBLE PRECISION NOT NULL,
-    lng         DOUBLE PRECISION NOT NULL,
-    accuracy_m  FLOAT,
-    timestamp   TIMESTAMPTZ NOT NULL,
-    is_noise    BOOLEAN DEFAULT FALSE,  -- đánh dấu sau khi filter
-
-    -- Idempotency: chống trùng khi client retry
-    UNIQUE (session_id, device_id, timestamp)
-);
--- Index gợi ý:
-CREATE INDEX idx_gps_session ON gps_logs(session_id, timestamp);
-CREATE INDEX idx_gps_device_time ON gps_logs(device_id, timestamp);
-CREATE INDEX idx_gps_timestamp ON gps_logs(timestamp);
-```
-
-### Bảng `cafe_scores`
-```sql
-CREATE TABLE cafe_scores (
-    score_id        SERIAL PRIMARY KEY,
-    cafe_id         INTEGER REFERENCES cafes(cafe_id),
-    computed_at     TIMESTAMPTZ DEFAULT NOW(),
-    total_visits    INTEGER,
-    avg_duration    FLOAT,
-    dropoff_rate    FLOAT,
-    behavior_score  FLOAT  -- Output của FR8
-);
-```
-
----
-
-## 6. PHÂN CHIA NHIỆM VỤ (Task Delegation)
-
-> ⚠️ **TODO:** Cần điền chi tiết task cho từng thành viên theo tuần trước khi bắt đầu sprint.
-
-### Võ Viết Đức — Tech Lead & Fullstack / DevOps
-
-| Task | Module | Tuần |
-|---|---|---|
-|  |  |  |
-
-
-### 👤 Hà Hoàng Long — Thuật toán & Logic (OOP)
-
-| Task | Module | Tuần |
-|---|---|---|
-|  |  |  |
-
-
-### 👤 Nguyễn Anh Tú — Data Processing & Reporting
-
-| Task | Module | Tuần |
-|---|---|---|
-|  |  |  |
-
----
-
-## 7. API CONTRACT 
-
-### `POST /api/tracking` — Nhận GPS
-```
-Request Body (JSON):
-{
-  "device_id":  string (UUID),
-  "session_id": string (UUID),
-  "lat":        float,
-  "lng":        float,
-  "accuracy":   float (meters),
-  "timestamp":  string (ISO 8601)
-}
-
-Response 200:
-{ "status": "ok", "log_id": int }
-
-Response 422:
-{ "error": "Invalid coordinates" }
-```
-
-### `POST /api/session/start` — Bắt đầu session
-```
-Request Body: { "device_id": string, "cafe_id": int (optional) }
-Response 200: { "session_id": "uuid-xxxx", "started_at": "ISO timestamp" }
-
-Fallback khi cafe_id null:
-  - Backend sẽ dùng tọa độ GPS đầu tiên nhận được trong session
-  - Tính khoảng cách tới tất cả các quán trong bảng cafes
-  - Nếu nằm trong radius_m của quán nào → gán cafe_id = quán đó
-  - Nếu không nằm trong quán nào → cafe_id = NULL (session không tính điểm cho quán)
-```
-
-### `POST /api/session/end` — Kết thúc session
-```
-Request Body: { "session_id": string }
-Response 200: { "duration_min": float, "behavior_detected": bool }
-```
-
-### `GET /api/cafes` — Danh sách quán
-```
-Response 200: [ { "cafe_id", "name", "address", "center_lat", "center_lng", "score" } ]
-```
-
-### `GET /api/report/export` — Export Excel
-```
-Response 200: File download (.xlsx)
-Content-Disposition: attachment; filename="geostudy_report.xlsx"
-```
-
----
-
-## 8. LỘ TRÌNH TRIỂN KHAI (Milestones)
-
-> ⚠️ **TODO:** Cần bổ sung deliverables cụ thể cho từng tuần và assign owner.
-
-```
-TUẦN 1: NỀN TẢNG
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- Đức:  
- Long: 
- Tú:   
-
-TUẦN 2: 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-TUẦN 3:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- 
-TUẦN 4:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-```
-
----
-
-## 9. RỦI RO & PHƯƠNG ÁN DỰ PHÒNG (Risk Management)
-
-| Rủi ro | Khả năng | Phương án xử lý |
-|---|---|---|
-| GPS điện thoại không chính xác trong nhà | Cao | Mở rộng bán kính lên 100m; ghi nhận `accuracy` để filter |
-| Trình duyệt mobile dừng tracking khi tắt màn hình | Cao | Dùng Wake Lock API; hướng dẫn user giữ màn hình sáng |
-| Công thức tính điểm cho kết quả không hợp lý | Trung bình | Chuẩn hóa dữ liệu test tuần 1; Long review công thức trước tuần 2 |
-| Không đủ data thực tế để validate | Trung bình | Script sinh data GPS giả (Tú viết tuần 1) |
-| Deploy VPS gặp sự cố | Thấp | Docker Compose → demo local vẫn được |
-
----
-
-## 10. ĐỊNH NGHĨA HOÀN THÀNH (Definition of Done)
-
-Dự án coi là **hoàn thành** khi đáp ứng đủ các tiêu chí sau:
-(Có thể thay đổi sau khi hỏi mentor hoặc trong quá trình phát triển)
-
-- [ ] Người dùng mở Chrome/Safari mobile, bấm nút → tọa độ GPS được gửi về server
-- [ ] Hệ thống nhận dạng được session "đang học" và phân biệt với "chỉ đi qua"
-- [ ] Điểm đánh giá hành vi của ít nhất 3 quán cafe được tính và hiển thị
-- [ ] Export được file Excel chứa báo cáo tổng hợp
-- [ ] Toàn bộ hệ thống chạy được bằng `docker-compose up`
-- [ ] Demo live được trước Mentor trong 5–10 phút
-
----
-*Mọi thay đổi requirement sau Tuần 1 cần được cả nhóm đồng thuận trước khi cập nhật.*
+## v0.2
+- Viết lại theo hướng module hóa
+- Tách requirement hệ thống khỏi chi tiết implementation
+- Tách riêng module Scoring Engine để phục vụ tài liệu model riêng
+- Phù hợp hơn với dự án nhóm 3 người, scope mock data, thời gian 1 tháng
