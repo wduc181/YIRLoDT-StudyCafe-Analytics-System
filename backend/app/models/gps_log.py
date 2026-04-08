@@ -1,11 +1,34 @@
 """
 gps_log.py — SQLAlchemy ORM Model: GpsLog.
 
-TODO:
-- Tạo class GpsLog(Base) mapping bảng `gps_logs`.
-- Columns: log_id (BIGSERIAL PK), session_id (FK → sessions),
-  device_id, lat, lng, accuracy_m, timestamp, is_noise (default False).
-- UNIQUE constraint: (session_id, timestamp) → chống duplicate.
-- Indexes: idx_gps_session_time, idx_gps_device_time, idx_gps_timestamp.
-- Ref: docs/api_design.md mục 8.3.
+Mapping bảng `gps_logs` — lưu điểm GPS theo session.
+UNIQUE constraint: (session_id, timestamp) → chống duplicate.
+Ref: docs/api_design.md mục 8.3.
 """
+
+from sqlalchemy import Column, BigInteger, Float, Boolean, String, ForeignKey, Index, UniqueConstraint
+from sqlalchemy.dialects.postgresql import UUID, TIMESTAMP
+
+from app.db.database import Base
+
+
+class GpsLog(Base):
+    """Một điểm dữ liệu vị trí GPS trong session."""
+
+    __tablename__ = "gps_logs"
+
+    log_id = Column(BigInteger, primary_key=True, autoincrement=True)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.session_id"), nullable=False)
+    device_id = Column(String(64), nullable=True)
+    lat = Column(Float, nullable=False)
+    lng = Column(Float, nullable=False)
+    accuracy_m = Column(Float, nullable=True)
+    timestamp = Column(TIMESTAMP(timezone=True), nullable=False)
+    is_noise = Column(Boolean, default=False)
+
+    __table_args__ = (
+        UniqueConstraint("session_id", "timestamp", name="uq_gps_session_timestamp"),
+        Index("idx_gps_session_time", "session_id", "timestamp"),
+        Index("idx_gps_device_time", "device_id", "timestamp"),
+        Index("idx_gps_timestamp", "timestamp"),
+    )

@@ -1,10 +1,28 @@
 """
 admin.py — FastAPI Router: Admin/Internal endpoints.
 
-TODO:
-- POST /api/mock-data/import              → Nạp mock data để test pipeline.
-                                             Gọi mock_data service.
-- POST /api/admin/cafes/{cafe_id}/approve  → [Optional] Admin duyệt quán pending.
-- Endpoints nội bộ, không expose cho end-user.
-- Ref: docs/api_design.md mục 5.7, 5.10.
+Endpoints nội bộ, không expose cho end-user.
+Ref: docs/api_design.md mục 5.7, 5.10.
 """
+
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.dependencies import get_db
+from app.internal import mock_data
+
+router = APIRouter(tags=["admin"])
+
+
+@router.post("/mock-data/import")
+async def import_mock_data(db: AsyncSession = Depends(get_db)):
+    """Nạp mock data để test pipeline mà không cần đi thực tế."""
+    result = await mock_data.import_mock_data(db)
+    return {
+        "status": "ok",
+        "imported_sessions": result["imported_sessions"],
+        "imported_logs": result["imported_logs"],
+    }
+
+
+# [Optional] POST /api/admin/cafes/{cafe_id}/approve — implement sau khi Core hoàn thành

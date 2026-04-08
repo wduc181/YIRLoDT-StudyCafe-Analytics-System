@@ -1,10 +1,29 @@
 """
 cafe.py — SQLAlchemy ORM Model: Cafe.
 
-TODO:
-- Tạo class Cafe(Base) mapping bảng `cafes`.
-- Columns: cafe_id (PK), name, address, center_lat, center_lng,
-  radius_meters (default 50), status (default 'active'),
-  submitted_by (nullable), google_place_id (nullable, Optional).
-- Ref: docs/api_design.md mục 8.1.
+Mapping bảng `cafes` — lưu thông tin quán cafe mẫu.
+Ref: docs/api_design.md mục 8.1.
 """
+
+from sqlalchemy import Column, Integer, String, Float
+
+from app.db.database import Base
+
+
+class Cafe(Base):
+    """Quán cafe mẫu để hệ thống đánh giá."""
+
+    __tablename__ = "cafes"
+
+    cafe_id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=False)
+    address = Column(String, nullable=True)
+    center_lat = Column(Float, nullable=False)
+    center_lng = Column(Float, nullable=False)
+    radius_meters = Column(Integer, default=50)
+    status = Column(String(16), default="active")
+    # 'active'   : quán mặc định / đã được duyệt
+    # 'pending'  : do user đề xuất, chờ admin duyệt
+    # 'disabled' : tắt bởi admin
+    submitted_by = Column(String(64), nullable=True)  # device_id người đề xuất
+    google_place_id = Column(String(255), nullable=True)  # [Optional] Place ID từ Google

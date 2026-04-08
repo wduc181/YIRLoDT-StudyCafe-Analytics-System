@@ -1,14 +1,24 @@
 """
 cafes.py — FastAPI Router: Cafe endpoints.
 
-TODO:
-- GET  /api/cafes          → Lấy danh sách quán cafe + điểm đánh giá.
-                              Gọi cafe_service.get_all_cafes().
-- GET  /api/cafes/nearby   → [Optional] Lấy quán gần nhất theo GPS.
-                              Query params: lat, lng, radius, limit.
-                              Gọi cafe_service.get_nearby_cafes().
-- POST /api/cafes/suggest  → [Optional] Đề xuất thêm quán mới.
-                              Gọi cafe_service.suggest_cafe().
-- Mọi endpoint dùng Pydantic schema, không trả dict raw.
-- Ref: docs/api_design.md mục 5.4, 5.8, 5.9.
+Ref: docs/api_design.md mục 5.4, 5.8, 5.9.
 """
+
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.dependencies import get_db
+from app.schemas.cafe import CafeResponse
+from app.services import cafe_service
+
+router = APIRouter(tags=["cafes"])
+
+
+@router.get("/cafes", response_model=list[CafeResponse])
+async def get_cafes(db: AsyncSession = Depends(get_db)):
+    """Lấy danh sách quán cafe + điểm đánh giá hiện tại."""
+    return await cafe_service.get_all_cafes(db)
+
+
+# [Optional] GET /api/cafes/nearby — tạm stub, implement sau khi Core hoàn thành
+# [Optional] POST /api/cafes/suggest — tạm stub, implement sau khi Core hoàn thành
