@@ -1,0 +1,12 @@
+# StudyCafe Analytics System — Python Dependencies
+# TODO: Pin version cụ thể khi đã test ổn định
+
+fastapi
+uvicorn[standard]
+sqlalchemy[asyncio]
+asyncpg
+pydantic>=2.0
+pydantic-settings
+alembic
+openpyxl
+python-dotenv
