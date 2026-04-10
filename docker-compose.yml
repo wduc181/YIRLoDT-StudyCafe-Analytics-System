@@ -31,13 +31,30 @@ services:
       CORS_ORIGINS: "http://localhost:5173,http://localhost:3000"
       GOOGLE_PLACES_API_KEY: ""
     ports:
-      - "8080:8000"
+      - "8088:8000"
     depends_on:
       db:
         condition: service_healthy
     volumes:
       - ./backend:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ─── React Frontend ──────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: studycafe-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: "http://localhost:8088"
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
 
 volumes:
   pgdata:
