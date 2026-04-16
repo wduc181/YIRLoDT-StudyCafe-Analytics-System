@@ -6,6 +6,7 @@ Ref: docs/api_design.md mục 5.1, 5.3, 5.5.
 """
 
 import uuid
+import logging
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
@@ -21,6 +22,9 @@ from app.schemas.session import (
     SessionEndResponse,
     SessionResponse,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 async def start_session(
@@ -70,8 +74,15 @@ async def end_session(
     session.status = "completed"
     await db.commit()
 
-    # TODO: Trigger scoring_service sau khi kết thúc session
-    # Chờ Scoring team chốt real-time hay batch
+    # Trigger scoring engine sau khi kết thúc session (real-time)
+    # Scoring engine là embedded module — gọi qua scoring_service adapter
+    # Không block response — log kết quả, lỗi scoring không ảnh hưởng response
+    try:
+        from app.services.scoring_service import score_and_update_cafe
+        scoring_result = await score_and_update_cafe(db, data.session_id)
+        logger.info(f"Scoring result for session {data.session_id}: {scoring_result.get('status')}")
+    except Exception as e:
+        logger.warning(f"Scoring failed for session {data.session_id}: {e}")
 
     return SessionEndResponse(
         status="ok",
