@@ -5,6 +5,7 @@ Khởi tạo FastAPI app, CORS middleware, include routers, lifespan events.
 """
 
 import logging
+import logging.config
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -13,12 +14,38 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.db.database import init_db, close_db
 
-# Logging config — format chuẩn cho toàn backend
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+# Logging config — dùng dictConfig để không bị uvicorn override
+# disable_existing_loggers=False giữ uvicorn loggers hoạt động bình thường
+LOGGING_CONFIG = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standard": {
+            "format": "%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "standard",
+            "stream": "ext://sys.stdout",
+        },
+    },
+    "loggers": {
+        "studycafe": {
+            "level": "INFO",
+            "handlers": ["console"],
+            "propagate": False,
+        },
+        "app": {
+            "level": "INFO",
+            "handlers": ["console"],
+            "propagate": False,
+        },
+    },
+}
+logging.config.dictConfig(LOGGING_CONFIG)
 logger = logging.getLogger("studycafe")
 
 # Import models để Base.metadata nhận đủ tables

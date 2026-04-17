@@ -9,11 +9,11 @@ File này chịu trách nhiệm:
 3. Persist kết quả vào DB (cafe_scores)
 
 Khi scoring_engine chưa có → log warning, return placeholder.
-Ref: AGENTS.md mục 10, docs/api_design.md mục 6.
 """
 
 import logging
 from datetime import datetime, timezone
+from uuid import UUID
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,19 +42,24 @@ async def _build_scoring_payload(db: AsyncSession, session_id: str) -> dict | No
     """
     Build input payload cho scoring engine theo contract api_design.md mục 6.2.
 
-    Returns None nếu session không tồn tại hoặc chưa có cafe_id.
+    Returns None nếu session không tồn tại, UUID không hợp lệ, hoặc chưa có cafe_id.
     """
-    from uuid import UUID
+    # 1. Parse UUID — handle invalid format
+    try:
+        sid = UUID(str(session_id))
+    except (ValueError, AttributeError):
+        logger.error("Invalid UUID format: %r", session_id)
+        return None
 
-    # 1. Lấy session info
-    stmt = select(Session).where(Session.session_id == UUID(session_id))
+    # 2. Lấy session info
+    stmt = select(Session).where(Session.session_id == sid)
     result = await db.execute(stmt)
     session = result.scalar_one_or_none()
 
     if not session or not session.cafe_id:
         return None
 
-    # 2. Lấy cafe info
+    # 3. Lấy cafe info
     cafe_stmt = select(Cafe).where(Cafe.cafe_id == session.cafe_id)
     cafe_result = await db.execute(cafe_stmt)
     cafe = cafe_result.scalar_one_or_none()
@@ -62,7 +67,7 @@ async def _build_scoring_payload(db: AsyncSession, session_id: str) -> dict | No
     if not cafe:
         return None
 
-    # 3. Lấy GPS logs (sort timestamp tăng dần)
+    # 4. Lấy GPS logs (sort timestamp tăng dần)
     gps_stmt = (
         select(GpsLog)
         .where(GpsLog.session_id == session.session_id)
@@ -74,10 +79,11 @@ async def _build_scoring_payload(db: AsyncSession, session_id: str) -> dict | No
     if not gps_logs:
         return None
 
-    # 4. Build cafe_history từ cafe_scores hiện tại
+    # 5. Build cafe_history từ cafe_scores hiện tại
     cafe_history = await _get_cafe_history(db, cafe.cafe_id)
 
-    # 5. Assemble payload theo contract
+    # 6. Assemble payload theo contract
+    # Timestamp serialize theo contract: UTC + hậu tố Z (ISO 8601)
     payload = {
         "session_id": str(session.session_id),
         "device_id": session.device_id,
@@ -92,7 +98,7 @@ async def _build_scoring_payload(db: AsyncSession, session_id: str) -> dict | No
                 "lat": log.lat,
                 "lng": log.lng,
                 "accuracy": log.accuracy_m,
-                "timestamp": log.timestamp.isoformat(),
+                "timestamp": log.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
             }
             for log in gps_logs
         ],
@@ -141,6 +147,29 @@ async def _get_cafe_history(db: AsyncSession, cafe_id: int) -> dict:
     }
 
 
+def _parse_computed_at(cafe_result: dict) -> datetime:
+    """
+    Parse computed_at từ scoring engine output.
+    Ưu tiên giá trị từ engine, fallback datetime.now(UTC).
+    Handle cả string ISO 8601 và datetime object, ép UTC nếu naive.
+    """
+    raw = cafe_result.get("computed_at")
+    if not raw:
+        return datetime.now(timezone.utc)
+
+    if isinstance(raw, str):
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    elif isinstance(raw, datetime):
+        parsed = raw
+    else:
+        return datetime.now(timezone.utc)
+
+    # Ép UTC nếu naive datetime (không có tzinfo)
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
 async def _persist_cafe_score(db: AsyncSession, cafe_result: dict) -> None:
     """
     Lưu kết quả cafe scoring vào bảng cafe_scores.
@@ -148,7 +177,7 @@ async def _persist_cafe_score(db: AsyncSession, cafe_result: dict) -> None:
     """
     score = CafeScore(
         cafe_id=cafe_result["cafe_id"],
-        computed_at=datetime.now(timezone.utc),
+        computed_at=_parse_computed_at(cafe_result),
         total_sessions=cafe_result.get("total_sessions"),
         studying_sessions=cafe_result.get("studying_sessions"),
         study_rate=cafe_result.get("study_rate"),
@@ -170,7 +199,8 @@ async def score_and_update_cafe(db: AsyncSession, session_id: str) -> dict:
     """
     Orchestrator: build payload → gọi scoring engine → persist.
 
-    Gọi sau khi session kết thúc (POST /api/session/end).
+    Gọi trong background task sau khi session kết thúc.
+    Nhận DB session riêng (không reuse từ request).
 
     Returns:
         dict với status và kết quả scoring (hoặc placeholder nếu engine chưa có).
@@ -178,7 +208,7 @@ async def score_and_update_cafe(db: AsyncSession, session_id: str) -> dict:
     # 1. Build payload
     payload = await _build_scoring_payload(db, session_id)
     if not payload:
-        logger.warning(f"Không thể build scoring payload cho session {session_id}")
+        logger.warning("Không thể build scoring payload cho session %s", session_id)
         return {
             "session_id": session_id,
             "status": "skipped",
@@ -188,7 +218,8 @@ async def score_and_update_cafe(db: AsyncSession, session_id: str) -> dict:
     # 2. Kiểm tra scoring engine có sẵn không
     if not SCORING_ENGINE_AVAILABLE:
         logger.info(
-            f"Scoring engine chưa có. Session {session_id} sẽ được score khi module sẵn sàng."
+            "Scoring engine chưa có. Session %s sẽ được score khi module sẵn sàng.",
+            session_id,
         )
         return {
             "session_id": session_id,
@@ -200,7 +231,9 @@ async def score_and_update_cafe(db: AsyncSession, session_id: str) -> dict:
     try:
         session_result = engine_score_session(payload)
         logger.info(
-            f"Session {session_id} scored: is_studying={session_result.get('is_studying')}"
+            "Session %s scored: is_studying=%s",
+            session_id,
+            session_result.get("is_studying"),
         )
 
         # 4. Cập nhật cafe score nếu có cafe_history
@@ -213,7 +246,9 @@ async def score_and_update_cafe(db: AsyncSession, session_id: str) -> dict:
         # 5. Persist cafe score
         await _persist_cafe_score(db, cafe_result)
         logger.info(
-            f"Cafe {cafe_result['cafe_id']} score updated: {cafe_result.get('behavior_score')}"
+            "Cafe %s score updated: %s",
+            cafe_result["cafe_id"],
+            cafe_result.get("behavior_score"),
         )
 
         return {
@@ -224,7 +259,7 @@ async def score_and_update_cafe(db: AsyncSession, session_id: str) -> dict:
         }
 
     except Exception as e:
-        logger.error(f"Scoring engine error cho session {session_id}: {e}")
+        logger.error("Scoring engine error cho session %s: %s", session_id, e)
         return {
             "session_id": session_id,
             "status": "error",

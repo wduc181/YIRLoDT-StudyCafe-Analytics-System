@@ -26,10 +26,11 @@ async def generate_report(db: AsyncSession) -> io.BytesIO:
     ws = wb.active
     ws.title = "StudyCafe Report"
 
-    # Header
+    # Header — khớp CafeScore Bayesian schema (api_design.md mục 8.4)
     headers = [
-        "Cafe ID", "Tên quán", "Tổng lượt đến",
-        "Thời gian trung bình (phút)", "Tỷ lệ rời sớm",
+        "Cafe ID", "Tên quán", "Tổng sessions",
+        "Sessions học tập", "Tỷ lệ học tập",
+        "TG ổn định TB (phút)", "Tỷ lệ rời sớm",
         "Điểm hành vi", "Đủ dữ liệu",
     ]
     ws.append(headers)
@@ -48,8 +49,10 @@ async def generate_report(db: AsyncSession) -> io.BytesIO:
         ws.append([
             cafe.cafe_id,
             cafe.name,
-            score.total_visits if score else None,
-            score.avg_duration if score else None,
+            score.total_sessions if score else None,
+            score.studying_sessions if score else None,
+            score.study_rate if score else None,
+            score.avg_stable_duration_min if score else None,
             score.dropoff_rate if score else None,
             score.behavior_score if score else None,
             score.has_enough_data if score else False,

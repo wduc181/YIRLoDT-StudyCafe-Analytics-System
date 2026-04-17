@@ -438,6 +438,9 @@ db.cafe_scores.upsert(cafe_result)
     "cluster_count":                1,
 
     # Feature vector (logging/debug/v2 training)
+    # Ghi chú: chỉ chứa f2–f7 vì:
+    #   f1_study_rate là cafe-level aggregate (tính trong update_cafe_score, §6.4)
+    #   f8_session_vol là implicit Bayesian weight (không vào công thức trực tiếp)
     "features": {
         "f2_avg_stable_dur_norm": 0.483,
         "f3_spatial_stability":   0.72,
@@ -486,7 +489,7 @@ db.cafe_scores.upsert(cafe_result)
 |---|---|
 | Real-time hay batch? | **Cả hai**: real-time ngay sau session, batch để recalculate |
 | Giao tiếp bằng gì? | **Python function call** — embedded module, không HTTP |
-| Feature set cuối cùng? | 7 features (f1–f7) + f8 volume signal cho Bayesian weight |
+| Feature set cuối cùng? | 7 features (f1–f7) + f8 volume signal. Session output chứa f2–f7; f1 tính ở cafe-level, f8 là implicit weight |
 
 ---
 
