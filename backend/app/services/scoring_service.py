@@ -1,7 +1,7 @@
 """
 scoring_service.py — Adapter layer: Backend ↔ Scoring Engine.
 
-TODO: Implement scoring logic
+WAITING: chờ scoring_engine module deliver / integrate
 
 File này chịu trách nhiệm:
 1. Build input payload theo contract (api_design.md mục 6.2)
@@ -36,6 +36,19 @@ except ImportError:
         "scoring_engine module chưa có. "
         "Score sẽ không được tính cho đến khi module được cài đặt."
     )
+
+
+def _to_utc_iso(dt: datetime) -> str:
+    """
+    Chuẩn hoá datetime sang UTC rồi format ISO 8601 với hậu tố "Z".
+
+    - Nếu dt có tzinfo → astimezone(UTC).
+    - Nếu dt naive (không có tzinfo) → giả định đã là UTC (DB TIMESTAMPTZ
+      trả về aware, nhưng phòng trường hợp ORM strip tz).
+    """
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(timezone.utc)
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 async def _build_scoring_payload(db: AsyncSession, session_id: str) -> dict | None:
@@ -84,6 +97,7 @@ async def _build_scoring_payload(db: AsyncSession, session_id: str) -> dict | No
 
     # 6. Assemble payload theo contract
     # Timestamp serialize theo contract: UTC + hậu tố Z (ISO 8601)
+    # Chuẩn hoá sang UTC trước khi format — đảm bảo "Z" suffix đúng nghĩa
     payload = {
         "session_id": str(session.session_id),
         "device_id": session.device_id,
@@ -98,7 +112,7 @@ async def _build_scoring_payload(db: AsyncSession, session_id: str) -> dict | No
                 "lat": log.lat,
                 "lng": log.lng,
                 "accuracy": log.accuracy_m,
-                "timestamp": log.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "timestamp": _to_utc_iso(log.timestamp),
             }
             for log in gps_logs
         ],
@@ -131,19 +145,22 @@ async def _get_cafe_history(db: AsyncSession, cafe_id: int) -> dict:
     avg_result = await db.execute(avg_stmt)
     system_avg = avg_result.scalar()
 
+    # Default prior 6.5 theo scoring_engine_design.md v0.3 (mục 7.4, 8.2)
+    default_prior = 6.5
+
     if latest_score:
         return {
             "total_sessions_processed": latest_score.total_sessions or 0,
             "current_score": latest_score.behavior_score,
             "studying_session_count": latest_score.studying_sessions or 0,
-            "system_avg_score": system_avg or 5.0,  # default prior
+            "system_avg_score": system_avg or default_prior,
         }
 
     return {
         "total_sessions_processed": 0,
         "current_score": None,
         "studying_session_count": 0,
-        "system_avg_score": system_avg or 5.0,
+        "system_avg_score": system_avg or default_prior,
     }
 
 
@@ -259,7 +276,9 @@ async def score_and_update_cafe(db: AsyncSession, session_id: str) -> dict:
         }
 
     except Exception as e:
-        logger.error("Scoring engine error cho session %s: %s", session_id, e)
+        logger.exception("Scoring engine error cho session %s", session_id)
+        # Rollback để tránh session bị kẹt ở trạng thái "failed transaction"
+        await db.rollback()
         return {
             "session_id": session_id,
             "status": "error",

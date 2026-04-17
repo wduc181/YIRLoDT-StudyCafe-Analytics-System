@@ -65,8 +65,8 @@ async def _run_scoring_background(session_id: str) -> None:
                 session_id,
                 result.get("status"),
             )
-        except Exception as e:
-            logger.error("Scoring background failed for session %s: %s", session_id, e)
+        except Exception:
+            logger.exception("Scoring background failed for session %s", session_id)
 
 
 async def end_session(
