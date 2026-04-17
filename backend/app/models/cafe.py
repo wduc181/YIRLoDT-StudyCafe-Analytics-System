@@ -1,9 +1,4 @@
-"""
-cafe.py — SQLAlchemy ORM Model: Cafe.
-
-Mapping bảng `cafes` — lưu thông tin quán cafe mẫu.
-Ref: docs/api_design.md mục 8.1.
-"""
+# Mapping bảng `cafes` — lưu thông tin quán cafe được mock data.
 
 from sqlalchemy import Column, Integer, String, Float
 

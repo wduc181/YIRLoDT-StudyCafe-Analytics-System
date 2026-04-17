@@ -1,8 +1,6 @@
 """
 session_service.py — Business Logic: Session operations.
-
 Mọi DB operation dùng async/await.
-Ref: docs/api_design.md mục 5.1, 5.3, 5.5.
 """
 
 import uuid

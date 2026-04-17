@@ -2,9 +2,9 @@
 main.py — FastAPI Application Entrypoint.
 
 Khởi tạo FastAPI app, CORS middleware, include routers, lifespan events.
-Ref: docs/api_design.md mục 2 (nguyên tắc thiết kế API).
 """
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -12,6 +12,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.db.database import init_db, close_db
+
+# Logging config — format chuẩn cho toàn backend
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("studycafe")
 
 # Import models để Base.metadata nhận đủ tables
 import app.models  # noqa: F401
@@ -21,14 +29,13 @@ from app.routers import cafes, sessions, tracking, report, admin
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifespan event: init DB on startup, close on shutdown."""
     try:
         await init_db()
-        print("✅ Database connected and tables created.")
+        logger.info("Database connected and tables created.")
     except Exception as e:
-        print(f"⚠️  Database connection failed: {e}")
-        print("   App sẽ vẫn chạy nhưng các API cần DB sẽ lỗi.")
-        print("   Hãy kiểm tra DATABASE_URL trong .env và đảm bảo PostgreSQL đang chạy.")
+        logger.error("Database connection failed: %s", e)
+        logger.warning("App sẽ vẫn chạy nhưng các API cần DB sẽ lỗi.")
+        logger.warning("Hãy kiểm tra DATABASE_URL trong .env và đảm bảo PostgreSQL đang chạy.")
     yield
     try:
         await close_db()

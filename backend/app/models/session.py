@@ -1,9 +1,4 @@
-"""
-session.py — SQLAlchemy ORM Model: Session.
-
-Mapping bảng `sessions` — lưu phiên học tập của người dùng.
-Ref: docs/api_design.md mục 8.2.
-"""
+# Mapping bảng `sessions` — lưu phiên học tập của người dùng.
 
 import uuid
 

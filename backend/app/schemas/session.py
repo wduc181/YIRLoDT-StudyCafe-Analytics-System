@@ -1,7 +1,5 @@
 """
 session.py — Pydantic Schemas cho Session domain.
-
-Ref: docs/api_design.md mục 5.1, 5.3, 5.5.
 """
 
 from datetime import datetime

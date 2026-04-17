@@ -1,8 +1,7 @@
 """
 scoring_service.py — Adapter layer: Backend ↔ Scoring Engine.
 
-QUAN TRỌNG: Không tự implement logic scoring ở đây.
-Scoring engine do team riêng phụ trách (xem scoring_engine_design.md v0.3).
+TODO: Implement scoring logic
 
 File này chịu trách nhiệm:
 1. Build input payload theo contract (api_design.md mục 6.2)

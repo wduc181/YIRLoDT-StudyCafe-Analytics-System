@@ -2,7 +2,6 @@
 tracking_service.py — Business Logic: GPS Tracking.
 
 Chống duplicate bằng ON CONFLICT (session_id, timestamp) DO NOTHING.
-Ref: docs/api_design.md mục 5.2.
 """
 
 import uuid

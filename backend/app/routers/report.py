@@ -1,7 +1,5 @@
 """
 report.py — FastAPI Router: Report/Export endpoint.
-
-Ref: docs/api_design.md mục 5.6.
 """
 
 from fastapi import APIRouter, Depends

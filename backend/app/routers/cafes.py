@@ -1,7 +1,5 @@
 """
 cafes.py — FastAPI Router: Cafe endpoints.
-
-Ref: docs/api_design.md mục 5.4, 5.8, 5.9.
 """
 
 from fastapi import APIRouter, Depends

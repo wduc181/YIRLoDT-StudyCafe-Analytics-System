@@ -1,8 +1,6 @@
 """
 admin.py — FastAPI Router: Admin/Internal endpoints.
-
 Endpoints nội bộ, không expose cho end-user.
-Ref: docs/api_design.md mục 5.7, 5.10.
 """
 
 from fastapi import APIRouter, Depends

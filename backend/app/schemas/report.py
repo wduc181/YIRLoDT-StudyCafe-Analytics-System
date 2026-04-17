@@ -1,7 +1,5 @@
 """
 report.py — Pydantic Schemas cho Report/Export domain.
-
-Ref: docs/api_design.md mục 5.6.
 """
 
 from pydantic import BaseModel

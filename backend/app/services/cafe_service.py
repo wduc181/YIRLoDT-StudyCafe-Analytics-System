@@ -1,8 +1,6 @@
 """
 cafe_service.py — Business Logic: Cafe operations.
-
 Mọi DB operation dùng async/await.
-Ref: AGENTS.md mục 9.2.
 """
 
 from sqlalchemy import select

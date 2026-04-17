@@ -2,7 +2,6 @@
 report_service.py — Business Logic: Report/Export.
 
 Tổng hợp từ cafe_scores, tạo file Excel (.xlsx) bằng openpyxl.
-Ref: docs/api_design.md mục 5.6.
 """
 
 import io

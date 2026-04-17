@@ -1,7 +1,5 @@
 """
 tracking.py — FastAPI Router: GPS Tracking endpoint.
-
-Ref: docs/api_design.md mục 5.2.
 """
 
 from fastapi import APIRouter, Depends

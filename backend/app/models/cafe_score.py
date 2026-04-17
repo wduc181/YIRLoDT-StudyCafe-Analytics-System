@@ -1,9 +1,4 @@
-"""
-cafe_score.py — SQLAlchemy ORM Model: CafeScore.
-
-Mapping bảng `cafe_scores` — kết quả đánh giá hành vi theo quán.
-Ref: docs/api_design.md mục 8.4, scoring_engine_design.md §8.2.
-"""
+# Mapping bảng `cafe_scores` — kết quả đánh giá hành vi theo quán.
 
 from sqlalchemy import Column, Integer, Float, Boolean, String, ForeignKey, func
 from sqlalchemy.dialects.postgresql import TIMESTAMP

@@ -1,8 +1,6 @@
 """
 sessions.py — FastAPI Router: Session endpoints.
-
 Error format: {"status": "error", "message": "..."}.
-Ref: docs/api_design.md mục 5.1, 5.3, 5.5.
 """
 
 from fastapi import APIRouter, Depends, HTTPException

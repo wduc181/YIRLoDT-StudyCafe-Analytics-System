@@ -1,10 +1,5 @@
-"""
-gps_log.py — SQLAlchemy ORM Model: GpsLog.
-
-Mapping bảng `gps_logs` — lưu điểm GPS theo session.
-UNIQUE constraint: (session_id, timestamp) → chống duplicate.
-Ref: docs/api_design.md mục 8.3.
-"""
+# Mapping bảng `gps_logs` — lưu điểm GPS theo session.
+# UNIQUE constraint: (session_id, timestamp) → chống duplicate.
 
 from sqlalchemy import Column, BigInteger, Float, Boolean, String, ForeignKey, Index, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, TIMESTAMP
