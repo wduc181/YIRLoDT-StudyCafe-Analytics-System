@@ -76,7 +76,7 @@ async def end_session(
 ) -> SessionEndResponse:
     """Cập nhật end_time, tính duration_min, status='completed'."""
     stmt = select(Session).where(
-        Session.session_id == uuid.UUID(data.session_id)
+        Session.session_id == data.session_id
     )
     result = await db.execute(stmt)
     session = result.scalar_one_or_none()
@@ -97,7 +97,7 @@ async def end_session(
 
     # Trigger scoring engine trong background (non-blocking)
     # Dùng DB session riêng — session của request sẽ bị close sau response
-    background_tasks.add_task(_run_scoring_background, data.session_id)
+    background_tasks.add_task(_run_scoring_background, str(data.session_id))
 
     return SessionEndResponse(
         status="ok",
