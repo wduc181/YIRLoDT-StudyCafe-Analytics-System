@@ -1,7 +1,5 @@
 """
 tracking.py — Pydantic Schemas cho GPS Tracking domain.
-
-Ref: docs/api_design.md mục 5.2.
 """
 
 from datetime import datetime

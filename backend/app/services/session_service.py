@@ -1,14 +1,13 @@
 """
 session_service.py — Business Logic: Session operations.
-
 Mọi DB operation dùng async/await.
-Ref: docs/api_design.md mục 5.1, 5.3, 5.5.
 """
 
 import uuid
+import logging
 from datetime import datetime, timezone
 
-from fastapi import HTTPException
+from fastapi import BackgroundTasks, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +20,8 @@ from app.schemas.session import (
     SessionEndResponse,
     SessionResponse,
 )
+
+logger = logging.getLogger(__name__)
 
 
 async def start_session(
@@ -46,12 +47,36 @@ async def start_session(
     )
 
 
+async def _run_scoring_background(session_id: str) -> None:
+    """
+    Background task: chạy scoring với DB session riêng.
+
+    Tạo AsyncSession mới vì session của request đã bị close
+    sau khi response trả về. Không reuse db từ endpoint.
+    """
+    from app.db.database import async_session
+    from app.services.scoring_service import score_and_update_cafe
+
+    async with async_session() as db:
+        try:
+            result = await score_and_update_cafe(db, session_id)
+            logger.info(
+                "Scoring background result for session %s: %s",
+                session_id,
+                result.get("status"),
+            )
+        except Exception:
+            logger.exception("Scoring background failed for session %s", session_id)
+
+
 async def end_session(
-    db: AsyncSession, data: SessionEndRequest
+    db: AsyncSession,
+    data: SessionEndRequest,
+    background_tasks: BackgroundTasks,
 ) -> SessionEndResponse:
     """Cập nhật end_time, tính duration_min, status='completed'."""
     stmt = select(Session).where(
-        Session.session_id == uuid.UUID(data.session_id)
+        Session.session_id == data.session_id
     )
     result = await db.execute(stmt)
     session = result.scalar_one_or_none()
@@ -70,8 +95,9 @@ async def end_session(
     session.status = "completed"
     await db.commit()
 
-    # TODO: Trigger scoring_service sau khi kết thúc session
-    # Chờ Scoring team chốt real-time hay batch
+    # Trigger scoring engine trong background (non-blocking)
+    # Dùng DB session riêng — session của request sẽ bị close sau response
+    background_tasks.add_task(_run_scoring_background, str(data.session_id))
 
     return SessionEndResponse(
         status="ok",

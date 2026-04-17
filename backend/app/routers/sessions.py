@@ -1,11 +1,9 @@
 """
 sessions.py — FastAPI Router: Session endpoints.
-
 Error format: {"status": "error", "message": "..."}.
-Ref: docs/api_design.md mục 5.1, 5.3, 5.5.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db
@@ -38,10 +36,11 @@ async def start_session(
 @router.post("/session/end", response_model=SessionEndResponse)
 async def end_session(
     request: SessionEndRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
-    """Kết thúc session và trigger pipeline scoring nếu cần."""
-    return await session_service.end_session(db, request)
+    """Kết thúc session và trigger pipeline scoring trong background."""
+    return await session_service.end_session(db, request, background_tasks)
 
 
 @router.get("/session/{session_id}", response_model=SessionResponse)

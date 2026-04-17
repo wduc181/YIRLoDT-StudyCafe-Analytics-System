@@ -1,7 +1,5 @@
 """
 cafe.py — Pydantic Schemas cho Cafe domain.
-
-Ref: docs/api_design.md mục 5.4, 5.8, 5.9.
 """
 
 from pydantic import BaseModel

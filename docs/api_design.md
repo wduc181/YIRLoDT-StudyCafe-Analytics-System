@@ -357,50 +357,139 @@ Endpoint nội bộ, không expose ra ngoài.
 
 ## 6. Internal Contract — Backend ↔ Scoring Engine
 
-> Phần này là contract tạm thời. Sẽ chốt lại sau hoàn thiện `scoring_engine_design.md`.
+> Contract đã chốt theo `scoring_engine_design.md` v0.3 (10/04/2026).
+>
+> Scoring engine là **embedded Python module** — backend import trực tiếp,
+> không có HTTP call nội bộ.
 
-### 6.1 Input backend cung cấp cho scoring engine
+### 6.1 Cách gọi scoring engine
+
+```python
+from scoring_engine import score_session, update_cafe_score
+
+# Khi session kết thúc (POST /api/session/end):
+session_result = score_session(payload)
+
+# Cập nhật cafe score:
+cafe_result = update_cafe_score(
+    cafe_id        = payload["cafe"]["cafe_id"],
+    session_result = session_result,
+    cafe_history   = payload["cafe_history"]
+)
+
+# Backend persist:
+db.session_results.insert(session_result)
+db.cafe_scores.insert(cafe_result)   # append-only: mỗi lần tính tạo bản ghi mới
+```
+
+### 6.2 Input backend cung cấp cho scoring engine
+
 ```python
 {
-  "session_id": "uuid-string",
-  "device_id": "device-001",
-  "cafe": {
-    "cafe_id": 1,
-    "center_lat": 21.0285,
-    "center_lng": 105.8542,
-    "radius_meters": 50
-  },
-  "gps_points": [
-    {
-      "lat": 21.0285,
-      "lng": 105.8542,
-      "accuracy": 12.5,
-      "timestamp": "2026-04-07T09:01:00Z"
+    "session_id":  "uuid-string",
+    "device_id":   "device-001",
+    "cafe": {
+        "cafe_id":        1,
+        "center_lat":     21.0285,
+        "center_lng":     105.8542,
+        "radius_meters":  50
+    },
+    "gps_points": [
+        {
+            "lat":       21.0285,
+            "lng":       105.8542,
+            "accuracy":  12.5,
+            "timestamp": "2026-04-07T09:01:00Z"
+        }
+    ],
+    "cafe_history": {
+        "total_sessions_processed": 12,
+        "current_score":            7.4,
+        "studying_session_count":   9,
+        "system_avg_score":         6.5
     }
-  ]
 }
 ```
 
-### 6.2 Output backend kỳ vọng nhận lại
+> Nếu `cafe_history` vắng mặt → module vẫn chạy nhưng chỉ trả session-level result,
+> không cập nhật cafe score.
+
+### 6.3 Output — Session level (`score_session`)
+
 ```python
 {
-  "session_id": "uuid-string",
-  "is_studying": true,
-  "stable_duration_min": 87,
-  "behavior_features": {
-    "dropoff": false,
-    "movement_std": 5.2,
-    "cluster_count": 1
-  },
-  "behavior_score": 0.83,
-  "has_enough_data": true
+    "session_id":   "uuid-string",
+    "cafe_id":      1,
+
+    # Noise Filter
+    "total_gps_points":   120,
+    "clean_gps_points":   108,
+    "noise_point_count":  12,
+    "clean_data_rate":    0.90,
+
+    # Study Detection (ST-DBSCAN)
+    "is_studying":                  True,
+    "stable_duration_min":          87.0,
+    "dominant_cluster_pct":         0.87,
+    "centroid_distance_to_cafe_m":  18.3,
+    "is_within_cafe_radius":        True,
+    "spatial_std_m":                8.4,
+    "coverage_ratio":               0.87,
+    "cluster_count":                1,
+
+    # Feature vector (logging/debug/v2 training)
+    # Ghi chú: chỉ chứa f2–f7 vì:
+    #   f1_study_rate là cafe-level aggregate (tính trong update_cafe_score, §6.4)
+    #   f8_session_vol là implicit Bayesian weight (không vào công thức trực tiếp)
+    "features": {
+        "f2_avg_stable_dur_norm": 0.483,
+        "f3_spatial_stability":   0.72,
+        "f4_clean_data_rate":     0.90,
+        "f5_retention":           1.0,
+        "f6_cluster_purity":      0.87,
+        "f7_coverage_ratio":      0.87
+    },
+
+    # Meta
+    "processing_time_ms": 38,
+    "engine_version":      "2.0.0"
 }
 ```
 
-### 6.3 Điểm cần chờ Scoring team chốt
-- Module được gọi theo **real-time từng session** hay **batch**?
-- Module trả kết quả bằng **function call**, **ghi DB**, hay **file output**?
-- Feature set cuối cùng gồm những trường nào?
+### 6.4 Output — Cafe level (`update_cafe_score`)
+
+```python
+{
+    "cafe_id":      1,
+    "computed_at":  "2026-04-09T14:00:00Z",
+
+    # Aggregate stats
+    "total_sessions":           15,
+    "studying_sessions":        11,
+    "study_rate":               0.733,
+    "avg_stable_duration_min":  74.5,
+    "avg_spatial_std_m":        10.2,
+    "dropoff_count":            2,
+    "dropoff_rate":             0.133,
+
+    # Bayesian Score
+    "behavior_score":   7.8,
+    "has_enough_data":  True,
+    "bayesian_m":       5,
+    "prior_score":      6.5,
+
+    # Meta
+    "engine_version":  "2.0.0"
+}
+```
+
+### 6.5 Các câu hỏi đã được trả lời
+
+| Câu hỏi | Quyết định |
+|---|---|
+| Real-time hay batch? | **Cả hai**: real-time ngay sau session, batch để recalculate |
+| Giao tiếp bằng gì? | **Python function call** — embedded module, không HTTP |
+| Feature set cuối cùng? | 7 features (f1–f7) + f8 volume signal. Session output chứa f2–f7; f1 tính ở cafe-level, f8 là implicit weight |
 
 ---
 
@@ -477,25 +566,43 @@ CREATE TABLE cafe_scores (
     score_id SERIAL PRIMARY KEY,
     cafe_id INTEGER REFERENCES cafes(cafe_id),
     computed_at TIMESTAMPTZ DEFAULT NOW(),
-    total_visits INTEGER,
-    avg_duration FLOAT,
+    total_sessions INTEGER,
+    studying_sessions INTEGER,
+    study_rate FLOAT,
+    avg_stable_duration_min FLOAT,
+    avg_spatial_std_m FLOAT,
+    dropoff_count INTEGER,
     dropoff_rate FLOAT,
     behavior_score FLOAT,
-    has_enough_data BOOLEAN DEFAULT FALSE
+    has_enough_data BOOLEAN DEFAULT FALSE,
+    bayesian_m INTEGER,
+    prior_score FLOAT,
+    engine_version VARCHAR(16)
 );
 ```
+
+> **[Migration note]** Schema `cafe_scores` là append-only (score_id SERIAL PK).
+> Backend dùng `Base.metadata.create_all` (dev-only) — **không tự alter bảng đã tồn tại**.
+> Nếu DB đã chạy với schema cũ, cần `DROP TABLE cafe_scores` rồi restart,
+> hoặc tạo Alembic migration để thêm các cột mới.
 
 ---
 
 ## 9. Open items
 
-- Chờ chốt input/output cuối của scoring engine.
+- ~~Chờ chốt input/output cuối của scoring engine.~~ → Đã chốt (scoring_engine_design.md v0.3).
 - Chưa chốt endpoint admin/debug riêng.
 - Chưa chốt response format cho frontend dashboard nếu sau này cần màn hình admin.
+- Câu hỏi mở từ scoring_engine_design.md mục 12 (threshold, radius, EMA vs Bayesian) — chưa chốt.
 
 ---
 
 ## 10. Ghi chú phiên bản
+
+### v0.2
+- Đồng bộ Internal Contract (mục 6) với `scoring_engine_design.md` v0.3.
+- Cập nhật `cafe_scores` schema (mục 8.4) theo Bayesian scoring output.
+- Chốt: embedded module, function call, 2 hàm `score_session` + `update_cafe_score`.
 
 ### v0.1
 - Tạo khung API để bắt đầu code backend/frontend.
