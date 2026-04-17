@@ -379,7 +379,7 @@ cafe_result = update_cafe_score(
 
 # Backend persist:
 db.session_results.insert(session_result)
-db.cafe_scores.upsert(cafe_result)
+db.cafe_scores.insert(cafe_result)   # append-only: mỗi lần tính tạo bản ghi mới
 ```
 
 ### 6.2 Input backend cung cấp cho scoring engine
@@ -580,6 +580,11 @@ CREATE TABLE cafe_scores (
     engine_version VARCHAR(16)
 );
 ```
+
+> **[Migration note]** Schema `cafe_scores` là append-only (score_id SERIAL PK).
+> Backend dùng `Base.metadata.create_all` (dev-only) — **không tự alter bảng đã tồn tại**.
+> Nếu DB đã chạy với schema cũ, cần `DROP TABLE cafe_scores` rồi restart,
+> hoặc tạo Alembic migration để thêm các cột mới.
 
 ---
 

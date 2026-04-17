@@ -254,19 +254,29 @@ async def score_and_update_cafe(db: AsyncSession, session_id: str) -> dict:
         )
 
         # 4. Cập nhật cafe score nếu có cafe_history
-        cafe_result = engine_update_cafe_score(
-            cafe_id=payload["cafe"]["cafe_id"],
-            session_result=session_result,
-            cafe_history=payload.get("cafe_history"),
-        )
+        # Contract api_design.md §6.2: cafe_history vắng mặt → session-only
+        cafe_history = payload.get("cafe_history")
+        cafe_result = None
 
-        # 5. Persist cafe score
-        await _persist_cafe_score(db, cafe_result)
-        logger.info(
-            "Cafe %s score updated: %s",
-            cafe_result["cafe_id"],
-            cafe_result.get("behavior_score"),
-        )
+        if cafe_history:
+            cafe_result = engine_update_cafe_score(
+                cafe_id=payload["cafe"]["cafe_id"],
+                session_result=session_result,
+                cafe_history=cafe_history,
+            )
+
+            # 5. Persist cafe score
+            await _persist_cafe_score(db, cafe_result)
+            logger.info(
+                "Cafe %s score updated: %s",
+                cafe_result["cafe_id"],
+                cafe_result.get("behavior_score"),
+            )
+        else:
+            logger.info(
+                "Session %s: không cập nhật cafe score do thiếu cafe_history.",
+                session_id,
+            )
 
         return {
             "session_id": session_id,
