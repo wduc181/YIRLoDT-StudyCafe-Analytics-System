@@ -51,6 +51,7 @@ async def import_mock_data(db: AsyncSession) -> dict:
                 status="completed",
             )
             db.add(session)
+            await db.flush()
             total_sessions += 1
 
             # GPS logs mỗi 60 giây
