@@ -20,11 +20,11 @@ logger = logging.getLogger(__name__)
 
 # Import scoring engine (embedded module)
 try:
+    from scoring_engine import __version__ as _engine_version
     from scoring_engine import score_session as engine_score_session
     from scoring_engine import update_cafe_score as engine_update_cafe_score
-    from scoring_engine import config as _engine_config
     SCORING_ENGINE_AVAILABLE = True
-    logger.info("scoring_engine v%s loaded.", _engine_config.ENGINE_VERSION)
+    logger.info("scoring_engine v%s loaded.", _engine_version)
 except ImportError:
     SCORING_ENGINE_AVAILABLE = False
     logger.warning(
