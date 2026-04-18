@@ -11,6 +11,14 @@ Công thức Bayesian Average:
     R = raw_score × 10
     m = MIN_CONFIDENT_SESSIONS (prior weight)
     C = system_avg_score (prior)
+
+Output keys khớp hoàn toàn với CafeScore ORM model (backend/app/models/cafe_score.py):
+    cafe_id, computed_at,
+    total_sessions, studying_sessions, study_rate,
+    avg_stable_duration_min, avg_spatial_std_m,
+    dropoff_count, dropoff_rate,
+    behavior_score, has_enough_data,
+    bayesian_m, prior_score, engine_version
 """
 
 from __future__ import annotations
@@ -22,13 +30,13 @@ from scoring_engine.feature_extractor import aggregate_cafe_features, compute_ag
 
 
 # ============================================================
-# Bước 5: Session-level score
+# Bước 5: Session-level weighted score
 # ============================================================
 
 def compute_session_score(features_cafe: dict) -> float:
     """
     Tính raw_score của cafe từ feature vector đã aggregate.
-    Đây là weighted sum → [0, 1].
+    Weighted sum → [0, 1].
 
     Args:
         features_cafe: output của feature_extractor.aggregate_cafe_features()
@@ -38,13 +46,13 @@ def compute_session_score(features_cafe: dict) -> float:
     """
     w = config.WEIGHTS
     score = (
-        w["study_rate"]        * features_cafe["f1_study_rate"]
-        + w["avg_stable_dur"]  * features_cafe["f2_avg_stable_dur"]
+        w["study_rate"]         * features_cafe["f1_study_rate"]
+        + w["avg_stable_dur"]   * features_cafe["f2_avg_stable_dur"]
         + w["spatial_stability"]* features_cafe["f3_spatial_stability"]
-        + w["clean_data_rate"] * features_cafe["f4_clean_data_rate"]
-        + w["retention"]       * features_cafe["f5_retention"]
-        + w["cluster_purity"]  * features_cafe["f6_cluster_purity"]
-        + w["coverage_ratio"]  * features_cafe["f7_coverage_ratio"]
+        + w["clean_data_rate"]  * features_cafe["f4_clean_data_rate"]
+        + w["retention"]        * features_cafe["f5_retention"]
+        + w["cluster_purity"]   * features_cafe["f6_cluster_purity"]
+        + w["coverage_ratio"]   * features_cafe["f7_coverage_ratio"]
     )
     return float(max(0.0, min(1.0, score)))
 
@@ -81,7 +89,6 @@ def bayesian_cafe_score(
     else:
         score = (m * C + v * R) / (m + v)
 
-    # Clamp và round
     score = max(0.0, min(config.SCORE_SCALE, score))
     return round(score, 1)
 
@@ -99,16 +106,25 @@ def update_cafe_score(
     """
     Cập nhật điểm quán sau khi có session mới.
 
-    Có hai chế độ hoạt động:
-    1. Nếu all_session_results được cung cấp → tính lại toàn bộ từ đầu (batch mode).
-    2. Nếu chỉ có session_result + cafe_history → incremental update.
+    Hai chế độ:
+    1. all_session_results được cung cấp → batch recalculation (ưu tiên).
+    2. Chỉ session_result + cafe_history → incremental update.
+
+    Output keys khớp với _persist_cafe_score() trong scoring_service.py:
+        cafe_id, computed_at,
+        total_sessions, studying_sessions, study_rate,
+        avg_stable_duration_min, avg_spatial_std_m,
+        dropoff_count, dropoff_rate,
+        behavior_score, has_enough_data,
+        bayesian_m, prior_score, engine_version
 
     Args:
         cafe_id: ID quán.
         session_result: output của score_session().
-        cafe_history: dict từ backend (total_sessions_processed, studying_session_count,
-                      current_score, system_avg_score). Có thể None.
-        all_session_results: list tất cả session results của quán (batch mode).
+        cafe_history: dict từ backend (_get_cafe_history):
+            {total_sessions_processed, studying_session_count,
+             current_score, system_avg_score}. Có thể None.
+        all_session_results: list tất cả session results (batch mode).
 
     Returns:
         dict cafe score result theo output contract.
@@ -116,16 +132,11 @@ def update_cafe_score(
     now = datetime.now(timezone.utc).isoformat()
 
     if all_session_results is not None:
-        # Batch mode: tính lại toàn bộ
         return _compute_from_all_sessions(cafe_id, all_session_results, cafe_history, now)
 
-    # Incremental mode
     if cafe_history is None:
-        # Chưa có lịch sử → chỉ có 1 session này
-        session_results_for_agg = [session_result]
-        return _compute_from_all_sessions(cafe_id, session_results_for_agg, None, now)
+        return _compute_from_all_sessions(cafe_id, [session_result], None, now)
 
-    # Có lịch sử → aggregate từ thông tin lịch sử + session mới
     return _compute_incremental(cafe_id, session_result, cafe_history, now)
 
 
@@ -139,13 +150,13 @@ def _compute_from_all_sessions(
     cafe_history: dict | None,
     now: str,
 ) -> dict:
+    """Tính lại toàn bộ từ list session results."""
     features = aggregate_cafe_features(session_results)
     stats    = compute_aggregate_stats(session_results)
 
-    raw_score = compute_session_score(features)
-
+    raw_score  = compute_session_score(features)
     system_avg = (
-        cafe_history.get("system_avg_score", config.DEFAULT_SYSTEM_AVG)
+        float(cafe_history.get("system_avg_score") or config.DEFAULT_SYSTEM_AVG)
         if cafe_history else config.DEFAULT_SYSTEM_AVG
     )
 
@@ -158,9 +169,10 @@ def _compute_from_all_sessions(
     has_enough_data = stats["studying_sessions"] >= config.HAS_ENOUGH_DATA_THRESH
 
     return {
+        # Identity
         "cafe_id":      cafe_id,
         "computed_at":  now,
-        # Aggregate stats
+        # Aggregate stats — khớp CafeScore model columns
         "total_sessions":           stats["total_sessions"],
         "studying_sessions":        stats["studying_sessions"],
         "study_rate":               stats["study_rate"],
@@ -189,8 +201,11 @@ def _compute_incremental(
     now: str,
 ) -> dict:
     """
-    Cập nhật incremental: dùng thông tin aggregate từ lịch sử
-    cộng với session mới.
+    Incremental update: dùng aggregate statistics từ lịch sử + session mới.
+
+    cafe_history keys (từ scoring_service._get_cafe_history):
+        total_sessions_processed, studying_session_count,
+        current_score, system_avg_score
     """
     prev_total    = int(cafe_history.get("total_sessions_processed", 0))
     prev_studying = int(cafe_history.get("studying_session_count", 0))
@@ -200,22 +215,20 @@ def _compute_incremental(
     is_new_study = bool(session_result.get("is_studying", False))
     new_studying = prev_studying + (1 if is_new_study else 0)
 
-    # Tính raw_score incremental: build mini feature vector từ session mới
-    # kết hợp với lịch sử (đơn giản hóa cho incremental mode)
-    # Tỷ lệ study rate mới
+    # f1: study rate mới
     f1 = new_studying / new_total if new_total > 0 else 0.0
 
-    # Các features khác lấy từ session mới nếu is_studying, else giữ nguyên
+    # Features từ session mới nếu is_studying, fallback nếu không
     if is_new_study:
-        stable_dur = session_result.get("stable_duration_min", 0.0) or 0.0
+        stable_dur  = session_result.get("stable_duration_min", 0.0) or 0.0
         f2 = min(stable_dur / config.NORM_MAX_DURATION_MIN, 1.0)
         spatial_std = session_result.get("spatial_std_m") or 0.0
         f3 = 1.0 - min(spatial_std / config.NORM_MAX_SPATIAL_STD_M, 1.0)
         f6 = float(session_result.get("dominant_cluster_pct", 0.0))
         f7 = float(session_result.get("coverage_ratio", 0.0))
     else:
+        # Fallback dựa trên prior score để không inflate
         prev_score_0_10 = float(cafe_history.get("current_score") or config.DEFAULT_SYSTEM_AVG)
-        # Fallback về giá trị trung bình implied từ lịch sử
         f2 = min((prev_score_0_10 / config.SCORE_SCALE) * 0.8, 1.0)
         f3 = 0.5
         f6 = 0.5
@@ -244,24 +257,28 @@ def _compute_incremental(
 
     has_enough_data = new_studying >= config.HAS_ENOUGH_DATA_THRESH
 
-    # Tính dropoff đơn giản dựa trên thời lượng session
-    is_dropoff = (session_result.get("stable_duration_min") or 0.0) < config.DROPOFF_THRESHOLD_MIN
-    prev_dropoffs = round((cafe_history.get("dropoff_rate") or 0.0) * prev_total)
+    # Dropoff incremental
+    is_dropoff    = (session_result.get("stable_duration_min") or 0.0) < config.DROPOFF_THRESHOLD_MIN
+    prev_dropoffs = round(float(cafe_history.get("dropoff_rate") or 0.0) * prev_total)
     new_dropoffs  = prev_dropoffs + (1 if is_dropoff else 0)
 
     return {
+        # Identity
         "cafe_id":      cafe_id,
         "computed_at":  now,
+        # Aggregate stats — khớp CafeScore model columns
         "total_sessions":           new_total,
         "studying_sessions":        new_studying,
         "study_rate":               round(f1, 4),
-        "avg_stable_duration_min":  None,   # incremental mode: không có đủ data để avg
+        "avg_stable_duration_min":  None,   # incremental: không đủ data để avg
         "avg_spatial_std_m":        None,
         "dropoff_count":            new_dropoffs,
         "dropoff_rate":             round(new_dropoffs / new_total, 4) if new_total else 0.0,
+        # Bayesian Score
         "behavior_score":   behavior_score,
         "has_enough_data":  has_enough_data,
         "bayesian_m":       config.MIN_CONFIDENT_SESSIONS,
         "prior_score":      system_avg,
+        # Meta
         "engine_version":   config.ENGINE_VERSION,
     }

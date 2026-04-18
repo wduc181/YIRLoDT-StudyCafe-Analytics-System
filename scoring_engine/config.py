@@ -70,7 +70,8 @@ WEIGHTS: dict = {
 
 MIN_CONFIDENT_SESSIONS: int = 5       # m: ngưỡng tin cậy (số session is_studying=True)
 HAS_ENOUGH_DATA_THRESH: int = 5       # cùng giá trị — cần ≥ 5 studying session để has_enough_data=True
-DEFAULT_SYSTEM_AVG: float = 5.0       # prior C khi chưa có system_avg_score
+DEFAULT_SYSTEM_AVG: float = 6.5       # prior C khi chưa có system_avg_score
+                                      # Khớp với default_prior trong scoring_service._get_cafe_history()
 
 # Scale output về [0, 10]
 SCORE_SCALE: float = 10.0

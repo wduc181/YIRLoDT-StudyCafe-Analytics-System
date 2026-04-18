@@ -114,7 +114,8 @@ def test_bayesian_mature_cafe_near_raw():
 # ──────────────────────────────────────────────────────────────
 
 def test_bayesian_zero_sessions_returns_prior():
-    prior = 5.0
+    # Dùng DEFAULT_SYSTEM_AVG = 6.5 (khớp với backend scoring_service.py default_prior)
+    prior = config.DEFAULT_SYSTEM_AVG  # 6.5
     score = bayesian_cafe_score(
         raw_score_0_1=0.8,
         studying_session_count=0,
@@ -173,15 +174,22 @@ def test_cafe_result_output_keys():
         cafe_history=payload.get("cafe_history"),
     )
 
+    # Keys khớp với CafeScore ORM model (backend/app/models/cafe_score.py)
+    # và _persist_cafe_score() trong scoring_service.py
     required = [
         "cafe_id", "computed_at",
+        # Aggregate stats
         "total_sessions", "studying_sessions", "study_rate",
+        "avg_stable_duration_min", "avg_spatial_std_m",
         "dropoff_count", "dropoff_rate",
+        # Bayesian Score
         "behavior_score", "has_enough_data",
-        "bayesian_m", "prior_score", "engine_version",
+        "bayesian_m", "prior_score",
+        # Meta
+        "engine_version",
     ]
     for key in required:
-        assert key in cafe_result, f"cafe_result thiếu key '{key}'"
+        assert key in cafe_result, f"cafe_result thiếu key '{key}' (cần cho CafeScore model)"
 
 
 # ──────────────────────────────────────────────────────────────
