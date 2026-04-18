@@ -1,0 +1,28 @@
+{
+  "session_id": "bbbbbbbb-0002-0002-0002-bbbbbbbbbbbb",
+  "device_id": "test-device-002",
+  "cafe": {
+    "cafe_id": 1,
+    "center_lat": 21.0024,
+    "center_lng": 105.8453,
+    "radius_meters": 50
+  },
+  "gps_points": [
+    {"lat": 21.0024, "lng": 105.8453, "accuracy": 12.0, "timestamp": "2026-04-07T09:00:00Z"},
+    {"lat": 21.0024, "lng": 105.8454, "accuracy": 11.0, "timestamp": "2026-04-07T09:01:00Z"},
+    {"lat": 21.0025, "lng": 105.8453, "accuracy": 13.0, "timestamp": "2026-04-07T09:02:00Z"},
+    {"lat": 21.0024, "lng": 105.8453, "accuracy": 10.0, "timestamp": "2026-04-07T09:03:00Z"},
+    {"lat": 21.0024, "lng": 105.8454, "accuracy": 12.0, "timestamp": "2026-04-07T09:04:00Z"},
+    {"lat": 21.0025, "lng": 105.8453, "accuracy": 11.0, "timestamp": "2026-04-07T09:05:00Z"},
+    {"lat": 21.0024, "lng": 105.8453, "accuracy": 14.0, "timestamp": "2026-04-07T09:06:00Z"},
+    {"lat": 21.0024, "lng": 105.8454, "accuracy": 10.0, "timestamp": "2026-04-07T09:07:00Z"},
+    {"lat": 21.0025, "lng": 105.8453, "accuracy": 12.0, "timestamp": "2026-04-07T09:08:00Z"},
+    {"lat": 21.0024, "lng": 105.8453, "accuracy": 11.0, "timestamp": "2026-04-07T09:09:00Z"},
+    {"lat": 21.0024, "lng": 105.8454, "accuracy": 13.0, "timestamp": "2026-04-07T09:10:00Z"},
+    {"lat": 21.0025, "lng": 105.8453, "accuracy": 10.0, "timestamp": "2026-04-07T09:11:00Z"},
+    {"lat": 21.0024, "lng": 105.8453, "accuracy": 12.0, "timestamp": "2026-04-07T09:12:00Z"},
+    {"lat": 21.0024, "lng": 105.8454, "accuracy": 11.0, "timestamp": "2026-04-07T09:13:00Z"},
+    {"lat": 21.0025, "lng": 105.8453, "accuracy": 14.0, "timestamp": "2026-04-07T09:14:00Z"}
+  ],
+  "cafe_history": null
+}
