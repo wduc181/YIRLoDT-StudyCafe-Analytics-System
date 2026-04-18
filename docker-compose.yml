@@ -6,9 +6,9 @@ services:
     container_name: studycafe-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: studycafe
-      POSTGRES_PASSWORD: studycafe123
-      POSTGRES_DB: studycafe
+      POSTGRES_USER: ${POSTGRES_USER:-studycafe}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-studycafe123}
+      POSTGRES_DB: ${POSTGRES_DB:-studycafe}
     ports:
       - "5432:5432"
     volumes:
@@ -27,9 +27,9 @@ services:
     container_name: studycafe-backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql+asyncpg://studycafe:studycafe123@db:5432/studycafe
-      CORS_ORIGINS: "http://localhost:5173,http://localhost:3000"
-      GOOGLE_PLACES_API_KEY: ""
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-studycafe}:${POSTGRES_PASSWORD:-studycafe123}@db:5432/${POSTGRES_DB:-studycafe}
+      CORS_ORIGINS: ${CORS_ORIGINS:-"http://localhost:5173,http://localhost:3000"}
+      GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-""}
     ports:
       - "8088:8000"
     depends_on:

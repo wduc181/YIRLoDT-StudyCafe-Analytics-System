@@ -10,3 +10,4 @@ pydantic-settings
 alembic
 openpyxl
 python-dotenv
+-r backend/scoring_engine/requirements.txt

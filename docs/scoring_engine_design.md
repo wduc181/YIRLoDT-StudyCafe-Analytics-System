@@ -1,8 +1,8 @@
 # Scoring Engine Design Document
 ## StudyCafe Analytics System
 
-**Phiên bản:** v0.3  
-**Ngày cập nhật:** 10/04/2026  
+**Phiên bản:** v1.0  
+**Ngày cập nhật:** 18/04/2026  
 
 ---
 
@@ -759,3 +759,6 @@ DEFAULT_SYSTEM_AVG      = 5.0       # prior C khi chưa có system data
 
 ### v0.1
 - Tạo khung template, chờ hoàn thiện nội dung.
+
+### v1.0
+- Phát hành phiên bản chính thức 1.0

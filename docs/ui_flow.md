@@ -1,8 +1,8 @@
 # UI Flow Document
 ## StudyCafe Analytics System
 
-**Phiên bản:** v0.1 
-**Ngày cập nhật:** 07/04/2026
+**Phiên bản:** v1.0 
+**Ngày cập nhật:** 18/04/2026
 
 ---
 
@@ -385,3 +385,6 @@ thông qua Google Places Autocomplete.
 
 ### v0.1
 - Khởi tạo tài liệu với 4 màn hình cơ bản
+
+### v1.0
+- Phát hành phiên bản chính thức 1.0

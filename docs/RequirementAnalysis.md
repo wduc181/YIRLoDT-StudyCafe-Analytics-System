@@ -1,7 +1,7 @@
 # Requirement Analysis Document
 ## StudyCafe Analytics System
-**Phiên bản:** v0.3
-**Ngày cập nhật:** 07/04/2026  
+**Phiên bản:** v1.0
+**Ngày cập nhật:** 18/04/2026  
 
 ---
 
@@ -359,3 +359,6 @@ Sau RA v0.2, bộ tài liệu dự kiến gồm:
 
 ## v0.3
 - Thêm 1 số chức năng optional 
+
+## v1.0
+- Phát hành phiên bản chính thức 1.0

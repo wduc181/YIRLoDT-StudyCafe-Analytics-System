@@ -1,8 +1,8 @@
 # API Design Document
 ## StudyCafe Analytics System
 
-**Phiên bản:** v0.1  
-**Ngày tạo:** 07/04/2026
+**Phiên bản:** v1.0  
+**Ngày cập nhật:** 18/04/2026
 
 ---
 
@@ -607,3 +607,6 @@ CREATE TABLE cafe_scores (
 ### v0.1
 - Tạo khung API để bắt đầu code backend/frontend.
 - Chưa finalize phần scoring engine contract.
+
+### v1.0
+- Phát hành phiên bản chính thức 1.0
