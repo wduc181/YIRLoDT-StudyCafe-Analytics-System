@@ -14,8 +14,11 @@ from scoring_engine.noise_filter import apply_noise_filter, get_clean_points
 from scoring_engine.utils.validators import validate_and_parse_gps_points
 
 FIXTURES = Path(__file__).parent / "fixtures"
-CAFE = {"center_lat": 21.0024, "center_lng": 105.8453, "radius_meters": 50}
-
+CAFE = {
+    "cafe_center_lat": 21.0024,
+    "cafe_center_lng": 105.8453,
+    "cafe_radius_m": 50.0
+}
 
 def load_fixture(name: str) -> dict:
     with open(FIXTURES / name) as f:
