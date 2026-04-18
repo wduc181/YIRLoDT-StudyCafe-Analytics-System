@@ -90,11 +90,17 @@ def test_outside_cafe_not_studying():
 # ──────────────────────────────────────────────────────────────
 
 def test_continuous_movement_not_studying():
+    """
+    GPS points nằm trong geofence nhưng di chuyển zigzag > eps_spatial (25m) mỗi bước.
+    ST-DBSCAN không tạo được dominant cluster ổn định.
+    Reason phải là 'low_cluster_purity' hoặc 'no_cluster' — KHÔNG phải 'all_noise'.
+    """
     payload = load_fixture("session_continuous_move.json")
     result = run_pipeline_to_dbscan(payload)
 
-    assert result["is_studying"] is False, (
-        "Di chuyển liên tục phải is_studying=False"
+    assert result["is_studying"] is False, "Di chuyển liên tục phải is_studying=False"
+    assert result["reason"] in ("low_cluster_purity", "no_cluster", "too_short"), (
+        f"reason phải là low_cluster_purity/no_cluster, nhận được: {result['reason']}"
     )
 
 
@@ -103,6 +109,7 @@ def test_continuous_movement_not_studying():
 # ──────────────────────────────────────────────────────────────
 
 def test_empty_clean_points_no_crash():
+    """Input rỗng phải trả is_studying=False với reason rõ ràng, không crash."""
     result = run_st_dbscan(
         clean_points=[],
         cafe_center_lat=21.0024,
@@ -110,7 +117,9 @@ def test_empty_clean_points_no_crash():
         cafe_radius_m=50.0,
     )
     assert result["is_studying"] is False
-    assert result["reason"] is not None
+    assert result["reason"] in ("too_short", "no_cluster", "no_dominant_cluster"), (
+        f"Empty input phải trả reason rõ ràng, nhận được: {result['reason']}"
+    )
 
 
 # ──────────────────────────────────────────────────────────────
@@ -168,6 +177,8 @@ def test_noisy_gps_insufficient_clean():
 
     result = run_st_dbscan(clean, cafe["center_lat"], cafe["center_lng"], cafe["radius_meters"])
 
-    # Dù clean_count thấp hay cao, pipeline phải không crash
+    # Dù clean_count thấp hay cao, pipeline không crash
     assert isinstance(result["is_studying"], bool)
-    assert result["reason"] is not None or result["is_studying"] is True
+    # Nếu not studying thì phải có reason
+    if not result["is_studying"]:
+        assert result["reason"] is not None, "Khi is_studying=False phải có reason"

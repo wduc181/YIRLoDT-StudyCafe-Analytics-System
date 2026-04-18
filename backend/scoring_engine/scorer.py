@@ -258,9 +258,12 @@ def _compute_incremental(
     has_enough_data = new_studying >= config.HAS_ENOUGH_DATA_THRESH
 
     # Dropoff incremental
+    # NOTE: cafe_history từ backend (_get_cafe_history) không có key 'dropoff_rate'.
+    # Keys có: total_sessions_processed, studying_session_count, current_score, system_avg_score.
+    # → không thể reconstruct prev_dropoffs chính xác → reset về 0 cho session này.
+    # Batch mode (all_session_results) sẽ tính chính xác hơn.
     is_dropoff    = (session_result.get("stable_duration_min") or 0.0) < config.DROPOFF_THRESHOLD_MIN
-    prev_dropoffs = round(float(cafe_history.get("dropoff_rate") or 0.0) * prev_total)
-    new_dropoffs  = prev_dropoffs + (1 if is_dropoff else 0)
+    new_dropoffs  = 1 if is_dropoff else 0
 
     return {
         # Identity

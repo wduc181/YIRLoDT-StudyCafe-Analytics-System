@@ -80,4 +80,4 @@ SCORE_SCALE: float = 10.0
 # Engine metadata
 # ============================================================
 
-ENGINE_VERSION: str = "1.0.0"
+ENGINE_VERSION: str = "2.0.0"

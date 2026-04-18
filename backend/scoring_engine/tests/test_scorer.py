@@ -33,6 +33,7 @@ def test_ideal_session_end_to_end():
         f"Session lý tưởng phải is_studying=True. reason={result.get('reason')}"
     )
     assert result["stable_duration_min"] >= 20.0
+    assert result["engine_version"] == config.ENGINE_VERSION  # phải là "2.0.0"
 
     # Update cafe score
     cafe_result = update_cafe_score(
@@ -77,6 +78,12 @@ def test_score_always_in_range(fixture_name):
     )
     score = cafe_result["behavior_score"]
     assert 0.0 <= score <= 10.0, f"{fixture_name}: score={score} nằm ngoài [0, 10]"
+    # continuous_move phải bị detect bởi ST-DBSCAN (reason trong cluster/purity)
+    # không phải bởi geofence filter (reason=all_noise)
+    if fixture_name == "session_continuous_move.json":
+        assert session_result.get("reason") in (
+            "low_cluster_purity", "no_cluster", "too_short"
+        ), f"continuous_move phải fail ở ST-DBSCAN, nhận reason={session_result.get('reason')}"
 
 
 # ──────────────────────────────────────────────────────────────
