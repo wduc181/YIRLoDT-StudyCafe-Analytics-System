@@ -1,14 +1,7 @@
 """
 scoring_service.py — Adapter layer: Backend ↔ Scoring Engine.
 
-WAITING: chờ scoring_engine module deliver / integrate
-
-File này chịu trách nhiệm:
-1. Build input payload theo contract (api_design.md mục 6.2)
-2. Gọi scoring engine qua function call (mục 6.1)
-3. Persist kết quả vào DB (cafe_scores)
-
-Khi scoring_engine chưa có → log warning, return placeholder.
+INTEGRATED: scoring_engine module đã được tích hợp.
 """
 
 import logging
@@ -25,16 +18,18 @@ from app.models.cafe_score import CafeScore
 
 logger = logging.getLogger(__name__)
 
-# Import scoring engine (embedded module) — sẽ có khi team scoring deliver
+# Import scoring engine (embedded module)
 try:
+    from scoring_engine import __version__ as _engine_version
     from scoring_engine import score_session as engine_score_session
     from scoring_engine import update_cafe_score as engine_update_cafe_score
     SCORING_ENGINE_AVAILABLE = True
+    logger.info("scoring_engine v%s loaded.", _engine_version)
 except ImportError:
     SCORING_ENGINE_AVAILABLE = False
     logger.warning(
-        "scoring_engine module chưa có. "
-        "Score sẽ không được tính cho đến khi module được cài đặt."
+        "Không thể import scoring_engine. "
+        "Kiểm tra dependencies: numpy, pandas, scikit-learn, scipy, python-dateutil."
     )
 
 
@@ -235,13 +230,17 @@ async def score_and_update_cafe(db: AsyncSession, session_id: str) -> dict:
     # 2. Kiểm tra scoring engine có sẵn không
     if not SCORING_ENGINE_AVAILABLE:
         logger.info(
-            "Scoring engine chưa có. Session %s sẽ được score khi module sẵn sàng.",
+            "Scoring engine chưa khả dụng (ImportError). Session %s sẽ được xử lý khi "
+            "dependencies được cài đặt đầy đủ.",
             session_id,
         )
         return {
             "session_id": session_id,
             "status": "pending",
-            "message": "Scoring engine chưa được tích hợp, chờ team scoring deliver module",
+            "message": (
+                "Scoring engine chưa khả dụng do ImportError; "
+                "vui lòng kiểm tra dependencies môi trường runtime"
+            ),
         }
 
     # 3. Gọi scoring engine (function call — embedded module)
