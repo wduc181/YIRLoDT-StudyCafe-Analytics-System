@@ -9,6 +9,7 @@ from typing import Any
 
 from dateutil import parser as dateutil_parser
 
+from scoring_engine import config
 
 # ============================================================
 # Validate toàn bộ payload đầu vào
@@ -96,7 +97,7 @@ def normalize_cafe_history(cafe_history: Any) -> dict | None:
         "total_sessions_processed": int(cafe_history.get("total_sessions_processed", 0)),
         "current_score":            cafe_history.get("current_score"),           # có thể None
         "studying_session_count":   int(cafe_history.get("studying_session_count", 0)),
-        "system_avg_score":         float(cafe_history.get("system_avg_score", 5.0)),
+        "system_avg_score": float(cafe_history.get("system_avg_score", config.DEFAULT_SYSTEM_AVG)),
     }
 
 
