@@ -15,6 +15,7 @@ from app.models.session import Session
 from app.models.gps_log import GpsLog
 from app.models.cafe import Cafe
 from app.models.cafe_score import CafeScore
+from app.models.session_result import SessionResult  # [AI-4 FIX]
 
 logger = logging.getLogger(__name__)
 
@@ -221,6 +222,50 @@ async def _persist_cafe_score(db: AsyncSession, cafe_result: dict) -> None:
     await db.commit()
 
 
+
+async def _persist_session_result(db: AsyncSession, session_result: dict) -> None:
+    """
+    [AI-4 FIX] Lưu kết quả session-level scoring vào bảng session_results.
+
+    Tại sao cần thiết:
+    - Batch recalculation cần session_duration_min và is_studying từ lịch sử.
+    - Nếu không persist, batch mode phải re-run toàn bộ pipeline từ GPS thô — chậm.
+    - Phân tích lịch sử (ai học ở đâu, bao lâu) không thể thực hiện được.
+
+    Mapping từ session_result dict (scoring_engine output) → SessionResult ORM.
+    Tất cả fields đều nullable để không crash khi scoring engine trả partial result.
+    """
+    from datetime import datetime, timezone
+
+    result = SessionResult(
+        session_id               = session_result.get("session_id"),
+        cafe_id                  = session_result.get("cafe_id"),
+        computed_at              = datetime.now(timezone.utc),
+        # Noise Filter
+        total_gps_points         = session_result.get("total_gps_points"),
+        clean_gps_points         = session_result.get("clean_gps_points"),
+        noise_point_count        = session_result.get("noise_point_count"),
+        clean_data_rate          = session_result.get("clean_data_rate"),
+        # Study Detection
+        is_studying              = session_result.get("is_studying"),
+        stable_duration_min      = session_result.get("stable_duration_min"),
+        session_duration_min     = session_result.get("session_duration_min"),
+        dominant_cluster_pct     = session_result.get("dominant_cluster_pct"),
+        spatial_std_m            = session_result.get("spatial_std_m"),
+        coverage_ratio           = session_result.get("coverage_ratio"),
+        cluster_count            = session_result.get("cluster_count"),
+        centroid_distance_to_cafe_m = session_result.get("centroid_distance_to_cafe_m"),
+        is_within_cafe_radius    = session_result.get("is_within_cafe_radius"),
+        reason                   = session_result.get("reason"),
+        # Scoring
+        session_score            = session_result.get("session_score"),
+        # Meta
+        engine_version           = session_result.get("engine_version"),
+    )
+    db.add(result)
+    await db.commit()
+
+
 async def score_and_update_cafe(db: AsyncSession, session_id: str) -> dict:
     """
     Orchestrator: build payload → gọi scoring engine → persist.
@@ -266,7 +311,13 @@ async def score_and_update_cafe(db: AsyncSession, session_id: str) -> dict:
             session_result.get("is_studying"),
         )
 
-        # 4. Cập nhật cafe score nếu có cafe_history
+        # 4. [AI-4 FIX] Persist session-level result ngay sau khi scoring xong
+        # Cần thiết cho batch recalculation và historical analytics.
+        # Persist trước cafe_score để nếu cafe_score fail thì session_result vẫn có.
+        await _persist_session_result(db, session_result)
+        logger.info("Session result persisted for session %s", session_id)
+
+        # 5. Cập nhật cafe score nếu có cafe_history
         # Contract api_design.md §6.2: cafe_history vắng mặt → session-only
         cafe_history = payload.get("cafe_history")
         cafe_result = None
@@ -278,7 +329,7 @@ async def score_and_update_cafe(db: AsyncSession, session_id: str) -> dict:
                 cafe_history=cafe_history,
             )
 
-            # 5. Persist cafe score
+            # 6. Persist cafe score
             await _persist_cafe_score(db, cafe_result)
             logger.info(
                 "Cafe %s score updated: %s",
