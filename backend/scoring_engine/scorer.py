@@ -204,8 +204,14 @@ def _compute_incremental(
     Incremental update: dùng aggregate statistics từ lịch sử + session mới.
 
     cafe_history keys (từ scoring_service._get_cafe_history):
-        total_sessions_processed, studying_session_count,
-        current_score, system_avg_score
+        total_sessions_processed  : int   — tổng session đã xử lý
+        studying_session_count    : int   — số session is_studying=True
+        current_score             : float | None — behavior_score hiện tại
+        system_avg_score          : float — prior C
+        dropoff_count             : int   — [AI-3] số session dropoff lịch sử;
+                                            PHẢI được thêm vào _get_cafe_history()
+                                            ở scoring_service.py phía backend.
+                                            Nếu thiếu → fallback 0 (mất lịch sử).
     """
     prev_total    = int(cafe_history.get("total_sessions_processed", 0))
     prev_studying = int(cafe_history.get("studying_session_count", 0))
@@ -218,7 +224,8 @@ def _compute_incremental(
     # f1: study rate mới
     f1 = new_studying / new_total if new_total > 0 else 0.0
 
-    # Features từ session mới nếu is_studying, fallback nếu không
+    # Features từ session mới nếu is_studying, fallback về 0.0 nếu không
+    # [FIX AI-1] NON_STUDY session không đóng góp feature dương — dùng 0.0 thay 0.5
     if is_new_study:
         stable_dur  = session_result.get("stable_duration_min", 0.0) or 0.0
         f2 = min(stable_dur / config.NORM_MAX_DURATION_MIN, 1.0)
@@ -227,16 +234,20 @@ def _compute_incremental(
         f6 = float(session_result.get("dominant_cluster_pct", 0.0))
         f7 = float(session_result.get("coverage_ratio", 0.0))
     else:
-        # Fallback dựa trên prior score để không inflate
+        # Session không học → không đóng góp feature học tập
+        # f2 vẫn lấy từ prior để tránh mất info lịch sử hoàn toàn
         prev_score_0_10 = float(cafe_history.get("current_score") or config.DEFAULT_SYSTEM_AVG)
         f2 = min((prev_score_0_10 / config.SCORE_SCALE) * 0.8, 1.0)
-        f3 = 0.5
-        f6 = 0.5
-        f7 = 0.5
+        f3 = 0.0   # [FIX AI-1] was 0.5 — spatial stability không đáng tin khi không học
+        f6 = 0.0   # [FIX AI-1] was 0.5 — cluster purity = 0 khi không có stable cluster
+        f7 = 0.0   # [FIX AI-1] was 0.5 — coverage ratio = 0 khi không học
 
     f4 = float(session_result.get("clean_data_rate", 0.0))
-    total_dur = session_result.get("stable_duration_min") or 0.0
-    f5 = 0.0 if total_dur < config.DROPOFF_THRESHOLD_MIN else 1.0
+
+    # [FIX AI-2] Dùng session_duration_min (tổng thời gian session) thay stable_duration_min
+    # stable_duration_min = thời gian trong cluster → người ngồi 45' nhưng cluster 15' bị tính dropoff sai
+    session_dur = float(session_result.get("session_duration_min") or 0.0)
+    f5 = 0.0 if session_dur < config.DROPOFF_THRESHOLD_MIN else 1.0
 
     features = {
         "f1_study_rate":        round(f1, 4),
@@ -257,13 +268,17 @@ def _compute_incremental(
 
     has_enough_data = new_studying >= config.HAS_ENOUGH_DATA_THRESH
 
-    # Dropoff incremental
-    # NOTE: cafe_history từ backend (_get_cafe_history) không có key 'dropoff_rate'.
-    # Keys có: total_sessions_processed, studying_session_count, current_score, system_avg_score.
-    # → không thể reconstruct prev_dropoffs chính xác → reset về 0 cho session này.
-    # Batch mode (all_session_results) sẽ tính chính xác hơn.
-    is_dropoff    = (session_result.get("stable_duration_min") or 0.0) < config.DROPOFF_THRESHOLD_MIN
-    new_dropoffs  = 1 if is_dropoff else 0
+    # [FIX AI-2] Dùng session_duration_min thay stable_duration_min cho is_dropoff
+    # [FIX AI-3] Cộng dồn dropoff_count từ lịch sử (prev_dropoffs) thay vì reset về 0/1
+    #
+    # AI-3 NOTE — cần Team Dev sync:
+    # scoring_service._get_cafe_history() phải trả thêm key "dropoff_count": int
+    # để incremental mode tích lũy được lịch sử. Nếu key không có → fallback về 0
+    # (an toàn nhưng mất lịch sử dropoff trước đó, giống bug cũ).
+    session_dur_for_dropoff = float(session_result.get("session_duration_min") or 0.0)
+    is_dropoff    = session_dur_for_dropoff < config.DROPOFF_THRESHOLD_MIN
+    prev_dropoffs = int(cafe_history.get("dropoff_count", 0))
+    new_dropoffs  = prev_dropoffs + (1 if is_dropoff else 0)
 
     return {
         # Identity
