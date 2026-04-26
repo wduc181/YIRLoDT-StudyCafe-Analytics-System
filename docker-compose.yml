@@ -38,6 +38,21 @@ services:
     volumes:
       - ./backend:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/').read()\" >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # ─── Mock Data Seeder ─────────────────────────────────────
+  mock-data:
+    image: curlimages/curl:8.7.1
+    container_name: studycafe-mock-data
+    depends_on:
+      backend:
+        condition: service_healthy
+    command: ["-fsS", "-X", "POST", "http://backend:8000/api/mock-data/import"]
+    restart: "no"
 
   # ─── React Frontend ──────────────────────────────────────
   frontend:

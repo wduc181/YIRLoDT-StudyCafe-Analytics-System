@@ -7,6 +7,7 @@ Ref: docs/api_design.md mục 5.7.
 import uuid
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.cafe import Cafe
@@ -19,14 +20,27 @@ async def import_mock_data(db: AsyncSession) -> dict:
     Tạo sessions + GPS logs giả lập.
     Trả về số sessions và logs đã import.
     """
+    # Reset dữ liệu mock cũ để endpoint có thể gọi lại nhiều lần mà không bị nhân bản.
+    await db.execute(text("TRUNCATE TABLE gps_logs, sessions, cafes RESTART IDENTITY CASCADE"))
+
     # Mock cafes (Hà Nội area)
     mock_cafes = [
-        Cafe(name="The Coffee House - Trần Đại Nghĩa", address="68 Trần Đại Nghĩa, Hai Bà Trưng, Hà Nội",
-             center_lat=21.0024, center_lng=105.8453, radius_meters=50, status="active"),
-        Cafe(name="Highlands Coffee - Bách Khoa", address="1 Giải Phóng, Hai Bà Trưng, Hà Nội",
-             center_lat=21.0035, center_lng=105.8468, radius_meters=50, status="active"),
-        Cafe(name="Phúc Long - Lê Thanh Nghị", address="42 Lê Thanh Nghị, Hai Bà Trưng, Hà Nội",
-             center_lat=21.0010, center_lng=105.8490, radius_meters=50, status="active"),
+        Cafe(name="Between Coffee ( Quán Cafe Ở Giữa )",
+             address="1B Ngõ 6 Ao Sen, P. Mộ Lao, Hà Đông, Hà Nội 100000, Việt Nam",
+             center_lat=20.982359491327195, center_lng=105.78793058834349, radius_meters=30, status="active"),
+        Cafe(name="Between Coffee ( Quán Cafe Ở Giữa )",
+             address="Số 1G, Khu Dệt, P. Ao Sen, P. Mộ Lao, Hà Đông, Hà Nội, Việt Nam",
+             center_lat=20.98298224221269, center_lng=105.78733641988076, radius_meters=30, status="active"),
+        Cafe(name="Nhà Lành Art & Coffee",
+             address="Nguyễn Văn Lộc, Làng Việt kiều Châu Âu, Hà Đông, Hà Nội, Việt Nam",
+             center_lat=20.984158695126112, center_lng=105.7837073256154, radius_meters=30, status="active"),
+        # Test location - tọa độ GPS hiện tại
+        Cafe(name="Test Location - Your Current GPS",
+             address="Hanoi Test Point",
+             center_lat=21.5945721, center_lng=105.8420725, radius_meters=30, status="active"),
+           Cafe(name="Test Location - Session Exact Match",
+               address="Hanoi Session Match Point",
+               center_lat=21.5941, center_lng=105.8432, radius_meters=30, status="active"),
     ]
     db.add_all(mock_cafes)
     await db.flush()
