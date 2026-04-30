@@ -14,7 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.internal.geo_resolver import resolve_nearest_cafe
 from app.models.session import Session
 from app.models.gps_log import GpsLog
-from app.schemas.tracking import TrackingRequest, TrackingResponse
+from app.models.cafe import Cafe
+from app.schemas.tracking import TrackingCafe, TrackingRequest, TrackingResponse
 
 
 async def record_gps(db: AsyncSession, data: TrackingRequest) -> TrackingResponse:
@@ -62,11 +63,27 @@ async def record_gps(db: AsyncSession, data: TrackingRequest) -> TrackingRespons
     else:
         log_id = row[0]
 
+    current_cafe = None
+
     # Nếu đây là GPS đầu tiên và session chưa có cafe_id, thử resolve quán gần nhất.
     if session.cafe_id is None:
         nearest_cafe = await resolve_nearest_cafe(db, data.lat, data.lng)
         if nearest_cafe is not None:
             session.cafe_id = nearest_cafe.cafe_id
             await db.commit()
+            current_cafe = nearest_cafe
+    else:
+        cafe_stmt = select(Cafe).where(Cafe.cafe_id == session.cafe_id)
+        cafe_result = await db.execute(cafe_stmt)
+        current_cafe = cafe_result.scalar_one_or_none()
 
-    return TrackingResponse(status="ok", log_id=log_id)
+    return TrackingResponse(
+        status="ok",
+        log_id=log_id,
+        current_cafe=(
+            TrackingCafe(cafe_id=current_cafe.cafe_id, name=current_cafe.name)
+            if current_cafe
+            else None
+        ),
+        scoring_eligible=current_cafe is not None,
+    )

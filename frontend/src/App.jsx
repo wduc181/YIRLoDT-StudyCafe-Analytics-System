@@ -105,6 +105,8 @@ function App() {
             gpsStatus={gps.gpsStatus}
             gpsCount={gps.gpsCount}
             gpsError={gps.error}
+            currentCafe={gps.currentCafe}
+            scoringEligible={gps.scoringEligible}
             onEndSession={handleEndSession}
             loading={session.loading}
           />
