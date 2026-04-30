@@ -260,3 +260,268 @@ def test_no_cafe_history_still_works():
         cafe_history=None,
     )
     assert cafe_result["behavior_score"] is not None
+
+
+# ══════════════════════════════════════════════════════════════
+# BUG FIX REGRESSION TESTS
+# ══════════════════════════════════════════════════════════════
+
+# ──────────────────────────────────────────────────────────────
+# TC-FIX-AI1: NON_STUDY session không inflate f3/f6/f7
+# ──────────────────────────────────────────────────────────────
+
+def test_ai1_non_study_fallback_features_are_zero():
+    """
+    [AI-1] Khi is_studying=False, incremental mode phải dùng f3=f6=f7=0.0
+    thay vì 0.5. Quán toàn NON_STUDY session không được có điểm cao.
+    """
+    from scoring_engine.scorer import _compute_incremental
+
+    non_study_session = {
+        "is_studying":          False,
+        "stable_duration_min":  5.0,
+        "session_duration_min": 10.0,
+        "spatial_std_m":        None,
+        "dominant_cluster_pct": 0.0,
+        "coverage_ratio":       0.0,
+        "clean_data_rate":      0.9,
+    }
+    cafe_history = {
+        "total_sessions_processed": 0,
+        "studying_session_count":   0,
+        "current_score":            None,
+        "system_avg_score":         6.5,
+        "dropoff_count":            0,
+    }
+
+    result = _compute_incremental(
+        cafe_id=1,
+        session_result=non_study_session,
+        cafe_history=cafe_history,
+        now="2026-01-01T00:00:00",
+    )
+
+    # Bayesian với v=0 (không có studying session) → phải pull về prior
+    assert result["behavior_score"] == round(6.5, 1), (
+        f"Quán 0 studying sessions phải có score = prior 6.5, got {result['behavior_score']}"
+    )
+    # study_rate = 0 → f1 = 0 → raw_score rất thấp
+    assert result["behavior_score"] <= 6.5, (
+        "NON_STUDY session không được inflate score vượt prior"
+    )
+
+
+# ──────────────────────────────────────────────────────────────
+# TC-FIX-AI2: Dropoff dùng session_duration_min, không stable_duration_min
+# ──────────────────────────────────────────────────────────────
+
+def test_ai2_dropoff_uses_session_duration_not_stable():
+    """
+    [AI-2] Người ngồi quán 45 phút (session_duration_min=45) nhưng
+    chỉ có 15 phút trong stable cluster (stable_duration_min=15)
+    KHÔNG được tính là dropoff (threshold = 30 phút).
+    """
+    from scoring_engine.scorer import _compute_incremental
+    from scoring_engine.feature_extractor import _get_duration
+
+    session_result = {
+        "is_studying":          True,
+        "stable_duration_min":  15.0,   # cluster chỉ 15 phút
+        "session_duration_min": 45.0,   # nhưng ngồi quán 45 phút
+        "spatial_std_m":        5.0,
+        "dominant_cluster_pct": 0.7,
+        "coverage_ratio":       0.6,
+        "clean_data_rate":      0.9,
+    }
+    cafe_history = {
+        "total_sessions_processed": 5,
+        "studying_session_count":   4,
+        "current_score":            7.5,
+        "system_avg_score":         6.5,
+        "dropoff_count":            1,
+    }
+
+    result = _compute_incremental(
+        cafe_id=1,
+        session_result=session_result,
+        cafe_history=cafe_history,
+        now="2026-01-01T00:00:00",
+    )
+
+    # session_duration_min=45 > threshold=30 → KHÔNG dropoff
+    assert result["dropoff_count"] == 1, (
+        f"dropoff_count phải giữ nguyên 1 (không thêm), got {result['dropoff_count']}"
+    )
+
+    # Test _get_duration trực tiếp
+    assert _get_duration(session_result) == 45.0, (
+        f"_get_duration phải trả session_duration_min=45.0, got {_get_duration(session_result)}"
+    )
+
+
+def test_ai2_correct_dropoff_when_session_short():
+    """
+    [AI-2] Session thực sự ngắn (session_duration_min=20 < threshold=30)
+    phải được tính là dropoff.
+    """
+    from scoring_engine.scorer import _compute_incremental
+
+    short_session = {
+        "is_studying":          False,
+        "stable_duration_min":  0.0,
+        "session_duration_min": 20.0,   # ngắn thật, dropoff đúng
+        "spatial_std_m":        None,
+        "dominant_cluster_pct": 0.0,
+        "coverage_ratio":       0.0,
+        "clean_data_rate":      0.8,
+    }
+    cafe_history = {
+        "total_sessions_processed": 3,
+        "studying_session_count":   2,
+        "current_score":            7.0,
+        "system_avg_score":         6.5,
+        "dropoff_count":            0,
+    }
+
+    result = _compute_incremental(
+        cafe_id=1,
+        session_result=short_session,
+        cafe_history=cafe_history,
+        now="2026-01-01T00:00:00",
+    )
+
+    assert result["dropoff_count"] == 1, (
+        f"Session 20 phút phải tính là dropoff, dropoff_count={result['dropoff_count']}"
+    )
+
+
+# ──────────────────────────────────────────────────────────────
+# TC-FIX-AI3: dropoff_count tích lũy lịch sử, không reset
+# ──────────────────────────────────────────────────────────────
+
+def test_ai3_dropoff_count_accumulates_history():
+    """
+    [AI-3] Quán đã có 3 dropoff trong lịch sử (dropoff_count=3).
+    Session mới ngắn (dropoff) → dropoff_count phải thành 4, không reset về 1.
+    """
+    from scoring_engine.scorer import _compute_incremental
+
+    short_session = {
+        "is_studying":          False,
+        "stable_duration_min":  5.0,
+        "session_duration_min": 10.0,   # < 30 → dropoff
+        "spatial_std_m":        None,
+        "dominant_cluster_pct": 0.0,
+        "coverage_ratio":       0.0,
+        "clean_data_rate":      0.7,
+    }
+    cafe_history = {
+        "total_sessions_processed": 9,
+        "studying_session_count":   6,
+        "current_score":            7.2,
+        "system_avg_score":         6.5,
+        "dropoff_count":            3,   # lịch sử đã có 3 dropoff
+    }
+
+    result = _compute_incremental(
+        cafe_id=1,
+        session_result=short_session,
+        cafe_history=cafe_history,
+        now="2026-01-01T00:00:00",
+    )
+
+    assert result["dropoff_count"] == 4, (
+        f"dropoff_count phải tích lũy: 3 + 1 = 4, got {result['dropoff_count']}"
+    )
+    assert result["total_sessions"] == 10
+    # dropoff_rate = 4/10 = 0.4
+    assert abs(result["dropoff_rate"] - 0.4) < 0.001
+
+
+def test_ai3_no_dropoff_session_keeps_history():
+    """
+    [AI-3] Session không dropoff → dropoff_count giữ nguyên lịch sử.
+    """
+    from scoring_engine.scorer import _compute_incremental
+
+    long_session = {
+        "is_studying":          True,
+        "stable_duration_min":  60.0,
+        "session_duration_min": 90.0,   # > 30 → không dropoff
+        "spatial_std_m":        8.0,
+        "dominant_cluster_pct": 0.85,
+        "coverage_ratio":       0.8,
+        "clean_data_rate":      0.95,
+    }
+    cafe_history = {
+        "total_sessions_processed": 5,
+        "studying_session_count":   3,
+        "current_score":            7.0,
+        "system_avg_score":         6.5,
+        "dropoff_count":            2,
+    }
+
+    result = _compute_incremental(
+        cafe_id=1,
+        session_result=long_session,
+        cafe_history=cafe_history,
+        now="2026-01-01T00:00:00",
+    )
+
+    assert result["dropoff_count"] == 2, (
+        f"Session không dropoff không được tăng dropoff_count, got {result['dropoff_count']}"
+    )
+
+
+# ──────────────────────────────────────────────────────────────
+# TC-FIX-AI5: session_score có trong output và trong [0, 1]
+# ──────────────────────────────────────────────────────────────
+
+def test_ai5_session_score_present_in_output():
+    """[AI-5] session_score phải có trong session result output."""
+    payload = load_fixture("session_studying_ideal.json")
+    result = score_session(payload)
+
+    assert "session_score" in result, "session_result phải có key 'session_score'"
+    assert 0.0 <= result["session_score"] <= 1.0, (
+        f"session_score phải ∈ [0, 1], got {result['session_score']}"
+    )
+
+
+def test_ai5_session_score_higher_for_studying_session():
+    """
+    [AI-5] Session is_studying=True phải có session_score cao hơn
+    session is_studying=False (cùng điều kiện GPS).
+    """
+    good_payload = load_fixture("session_studying_ideal.json")
+    bad_payload  = load_fixture("session_not_studying_short.json")
+
+    good_result = score_session(good_payload)
+    bad_result  = score_session(bad_payload)
+
+    assert good_result["session_score"] > bad_result["session_score"], (
+        f"Studying session ({good_result['session_score']}) phải có score cao hơn "
+        f"non-studying ({bad_result['session_score']})"
+    )
+
+
+def test_ai5_session_score_in_insufficient_session():
+    """[AI-5] _insufficient_session cũng phải có session_score = 0.0."""
+    payload = load_fixture("session_studying_ideal.json")
+    # Dùng payload với chỉ 1 GPS point → insufficient
+    minimal_payload = dict(payload)
+    minimal_payload["gps_points"] = payload["gps_points"][:1]
+
+    result = score_session(minimal_payload)
+    assert "session_score" in result
+    assert result["session_score"] == 0.0
+
+
+def test_ai5_session_score_added_to_output_keys():
+    """[AI-5] Cập nhật test_session_result_output_keys để include session_score."""
+    payload = load_fixture("session_studying_ideal.json")
+    result = score_session(payload)
+
+    required_new_keys = ["session_score"]
+    for key in required_new_keys:
+        assert key in result, f"session_result thiếu key mới '{key}' (AI-5)"

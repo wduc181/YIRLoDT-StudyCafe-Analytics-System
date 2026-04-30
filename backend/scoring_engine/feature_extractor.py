@@ -201,5 +201,11 @@ def _zero_features() -> dict:
 
 
 def _get_duration(session_result: dict) -> float:
-    """Lấy stable_duration nếu có, fallback về 0."""
-    return float(session_result.get("stable_duration_min") or 0.0)
+    """
+    Lấy session_duration_min (tổng thời gian ngồi quán) để tính dropoff.
+
+    [FIX AI-2] Đổi từ stable_duration_min → session_duration_min.
+    Lý do: stable_duration_min = thời gian trong cluster (có thể ngắn dù ngồi lâu).
+    Dropoff phải đo bằng tổng thời gian session thực tế.
+    """
+    return float(session_result.get("session_duration_min") or 0.0)

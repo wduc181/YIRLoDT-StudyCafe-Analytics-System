@@ -1,0 +1,275 @@
+{
+  "_description": "3 session mẫu đại diện cho từng loại trong dataset",
+  "_format_note": "Đây chính xác là format input của pipeline ST-DBSCAN",
+  "cafe_reference": {
+    "center_lat": 21.0024,
+    "center_lng": 105.8453,
+    "radius_meters": 50.0,
+    "effective_radius_m": 70.0
+  },
+  "samples": [
+    {
+      "case": "TRUE — Đang học (ideal_study)",
+      "session_id": "ideal_2",
+      "profile": "ideal_study",
+      "true_label": true,
+      "ambiguous": false,
+      "note": "Ngồi học 73 phút, brownian drift 3-7m, spike 8%",
+      "n_gps_points": 73,
+      "gps_points": [
+        {
+          "lat": 21.0024638,
+          "lng": 105.8453692,
+          "accuracy": 18.1,
+          "timestamp": "2026-04-10T08:00:00Z"
+        },
+        {
+          "lat": 21.0025477,
+          "lng": 105.8453091,
+          "accuracy": 20.1,
+          "timestamp": "2026-04-10T08:01:00Z"
+        },
+        {
+          "lat": 21.0025133,
+          "lng": 105.8453687,
+          "accuracy": 20.7,
+          "timestamp": "2026-04-10T08:02:00Z"
+        },
+        {
+          "lat": 21.0024417,
+          "lng": 105.8451846,
+          "accuracy": 15.6,
+          "timestamp": "2026-04-10T08:03:00Z"
+        },
+        {
+          "lat": 21.0024155,
+          "lng": 105.8452153,
+          "accuracy": 12.4,
+          "timestamp": "2026-04-10T08:04:00Z"
+        },
+        {
+          "lat": 21.0025235,
+          "lng": 105.8454032,
+          "accuracy": 17.2,
+          "timestamp": "2026-04-10T08:05:00Z"
+        },
+        {
+          "lat": 21.0024405,
+          "lng": 105.8452671,
+          "accuracy": 10.3,
+          "timestamp": "2026-04-10T08:06:00Z"
+        },
+        {
+          "lat": 21.0024863,
+          "lng": 105.8454142,
+          "accuracy": 13.3,
+          "timestamp": "2026-04-10T08:07:00Z"
+        },
+        {
+          "lat": 21.0024139,
+          "lng": 105.8453557,
+          "accuracy": 21.3,
+          "timestamp": "2026-04-10T08:08:00Z"
+        },
+        {
+          "lat": 21.0024147,
+          "lng": 105.8452711,
+          "accuracy": 12.7,
+          "timestamp": "2026-04-10T08:09:00Z"
+        }
+      ],
+      "_note_gps": "Hiển thị 10/73 điểm đầu"
+    },
+    {
+      "case": "FALSE — Không học (short_visit)",
+      "session_id": "short_158",
+      "profile": "short_visit",
+      "true_label": false,
+      "ambiguous": false,
+      "note": "Ghé qua 18 phút, lấy đồ uống rồi đi",
+      "n_gps_points": 18,
+      "gps_points": [
+        {
+          "lat": 21.0024142,
+          "lng": 105.845258,
+          "accuracy": 12.7,
+          "timestamp": "2026-04-10T08:00:00Z"
+        },
+        {
+          "lat": 21.0024312,
+          "lng": 105.8452916,
+          "accuracy": 15.6,
+          "timestamp": "2026-04-10T08:01:00Z"
+        },
+        {
+          "lat": 21.0023433,
+          "lng": 105.8453157,
+          "accuracy": 89.0,
+          "timestamp": "2026-04-10T08:02:00Z"
+        },
+        {
+          "lat": 21.0023915,
+          "lng": 105.8453724,
+          "accuracy": 18.6,
+          "timestamp": "2026-04-10T08:03:00Z"
+        },
+        {
+          "lat": 21.0024811,
+          "lng": 105.8453121,
+          "accuracy": 11.4,
+          "timestamp": "2026-04-10T08:04:00Z"
+        },
+        {
+          "lat": 21.0023895,
+          "lng": 105.845288,
+          "accuracy": 15.2,
+          "timestamp": "2026-04-10T08:05:00Z"
+        },
+        {
+          "lat": 21.0024018,
+          "lng": 105.8453122,
+          "accuracy": 10.5,
+          "timestamp": "2026-04-10T08:06:00Z"
+        },
+        {
+          "lat": 21.0024492,
+          "lng": 105.8453334,
+          "accuracy": 19.3,
+          "timestamp": "2026-04-10T08:07:00Z"
+        },
+        {
+          "lat": 21.0024469,
+          "lng": 105.8452977,
+          "accuracy": 21.4,
+          "timestamp": "2026-04-10T08:08:00Z"
+        },
+        {
+          "lat": 21.0024079,
+          "lng": 105.8452586,
+          "accuracy": 14.3,
+          "timestamp": "2026-04-10T08:09:00Z"
+        },
+        {
+          "lat": 21.002428,
+          "lng": 105.845209,
+          "accuracy": 12.3,
+          "timestamp": "2026-04-10T08:10:00Z"
+        },
+        {
+          "lat": 21.0024164,
+          "lng": 105.8453282,
+          "accuracy": 15.7,
+          "timestamp": "2026-04-10T08:11:00Z"
+        },
+        {
+          "lat": 21.0023879,
+          "lng": 105.8452684,
+          "accuracy": 14.2,
+          "timestamp": "2026-04-10T08:12:00Z"
+        },
+        {
+          "lat": 21.0023956,
+          "lng": 105.8453165,
+          "accuracy": 11.5,
+          "timestamp": "2026-04-10T08:13:00Z"
+        },
+        {
+          "lat": 21.0024331,
+          "lng": 105.8452911,
+          "accuracy": 21.6,
+          "timestamp": "2026-04-10T08:14:00Z"
+        },
+        {
+          "lat": 21.0024461,
+          "lng": 105.8452271,
+          "accuracy": 13.5,
+          "timestamp": "2026-04-10T08:15:00Z"
+        },
+        {
+          "lat": 21.0024269,
+          "lng": 105.8452839,
+          "accuracy": 12.9,
+          "timestamp": "2026-04-10T08:16:00Z"
+        },
+        {
+          "lat": 21.0024378,
+          "lng": 105.8452338,
+          "accuracy": 19.1,
+          "timestamp": "2026-04-10T08:17:00Z"
+        }
+      ]
+    },
+    {
+      "case": "FALSE/AMBIGUOUS — GPS giống học (sleeping_in_cafe)",
+      "session_id": "slp_204",
+      "profile": "sleeping_in_cafe",
+      "true_label": false,
+      "ambiguous": true,
+      "note": "Ngủ 31 phút trong quán — GPS giống học, không phân biệt được",
+      "n_gps_points": 31,
+      "gps_points": [
+        {
+          "lat": 21.0025043,
+          "lng": 105.8452601,
+          "accuracy": 17.7,
+          "timestamp": "2026-04-10T08:00:00Z"
+        },
+        {
+          "lat": 21.002492,
+          "lng": 105.8453003,
+          "accuracy": 18.1,
+          "timestamp": "2026-04-10T08:01:00Z"
+        },
+        {
+          "lat": 21.0024951,
+          "lng": 105.8452746,
+          "accuracy": 14.3,
+          "timestamp": "2026-04-10T08:02:00Z"
+        },
+        {
+          "lat": 21.0024579,
+          "lng": 105.8453003,
+          "accuracy": 19.9,
+          "timestamp": "2026-04-10T08:03:00Z"
+        },
+        {
+          "lat": 21.0024821,
+          "lng": 105.8453048,
+          "accuracy": 14.7,
+          "timestamp": "2026-04-10T08:04:00Z"
+        },
+        {
+          "lat": 21.0024757,
+          "lng": 105.8452863,
+          "accuracy": 11.0,
+          "timestamp": "2026-04-10T08:05:00Z"
+        },
+        {
+          "lat": 21.0024765,
+          "lng": 105.8453161,
+          "accuracy": 11.8,
+          "timestamp": "2026-04-10T08:06:00Z"
+        },
+        {
+          "lat": 21.0024617,
+          "lng": 105.8452855,
+          "accuracy": 21.3,
+          "timestamp": "2026-04-10T08:07:00Z"
+        },
+        {
+          "lat": 21.0024748,
+          "lng": 105.8453106,
+          "accuracy": 16.7,
+          "timestamp": "2026-04-10T08:08:00Z"
+        },
+        {
+          "lat": 21.0024408,
+          "lng": 105.8453038,
+          "accuracy": 20.8,
+          "timestamp": "2026-04-10T08:09:00Z"
+        }
+      ],
+      "_why_ambiguous": "Pipeline không thể phân biệt ngủ vs học chỉ từ GPS"
+    }
+  ]
+}

@@ -19,7 +19,7 @@ from scoring_engine import config
 from scoring_engine.noise_filter import apply_noise_filter, get_clean_points
 from scoring_engine.st_dbscan import run_st_dbscan
 from scoring_engine.feature_extractor import extract_session_features
-from scoring_engine.scorer import update_cafe_score
+from scoring_engine.scorer import update_cafe_score, compute_session_score
 from scoring_engine.utils.validators import (
     validate_payload,
     validate_and_parse_gps_points,
@@ -176,6 +176,40 @@ def _compute_duration_min(gps_points: list[dict]) -> float:
     return max(0.0, delta_s / 60.0)
 
 
+def _compute_session_only_score(features: dict) -> float:
+    """
+    [AI-5] Tính session_score từ features session-level (f2–f7, không có f1).
+
+    f1 (study_rate) là metric đa session, không tồn tại ở session đơn lẻ.
+    Các weight còn lại được normalize lại về tổng = 1.0.
+
+    Returns:
+        session_score ∈ [0.0, 1.0], làm tròn 4 chữ số.
+    """
+    w = config.WEIGHTS
+    # Tổng weight không có f1
+    total_w = (
+        w["avg_stable_dur"]
+        + w["spatial_stability"]
+        + w["clean_data_rate"]
+        + w["retention"]
+        + w["cluster_purity"]
+        + w["coverage_ratio"]
+    )
+
+    score = (
+        w["avg_stable_dur"]    * features.get("f2_avg_stable_dur_norm", 0.0)
+        + w["spatial_stability"] * features.get("f3_spatial_stability",   0.0)
+        + w["clean_data_rate"]   * features.get("f4_clean_data_rate",      0.0)
+        + w["retention"]         * features.get("f5_retention",            0.0)
+        + w["cluster_purity"]    * features.get("f6_cluster_purity",       0.0)
+        + w["coverage_ratio"]    * features.get("f7_coverage_ratio",       0.0)
+    )
+
+    normalized = score / total_w if total_w > 0 else 0.0
+    return round(float(max(0.0, min(1.0, normalized))), 4)
+
+
 def _build_session_result(
     session_id: str,
     cafe_id: int,
@@ -210,6 +244,9 @@ def _build_session_result(
         # Feature vector (logging/debug)
         "features": features,
 
+        # [AI-5] Session score (f2–f7, không có f1 vì f1 là metric đa session)
+        "session_score": _compute_session_only_score(features),
+
         # Meta
         "session_duration_min": round(session_duration_min, 1),
         "processing_time_ms":   processing_ms,
@@ -242,6 +279,7 @@ def _insufficient_session(
         "cluster_count": 0,
         "reason": "insufficient_gps_points",
         "features": {},
+        "session_score": 0.0,
         "session_duration_min": 0.0,
         "processing_time_ms": processing_ms,
         "engine_version": config.ENGINE_VERSION,
