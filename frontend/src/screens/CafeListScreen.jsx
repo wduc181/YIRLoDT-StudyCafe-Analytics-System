@@ -1,39 +1,97 @@
 /**
  * CafeListScreen.jsx — S4: Cafe List Screen.
  *
- * Hiển thị danh sách quán. Fallback về list tĩnh GET /api/cafes
- * nếu GPS không sẵn sàng (ui_flow.md mục 5.4).
+ * Hiển thị danh sách quán. Gọi GET /api/cafes với GPS để có khoảng cách;
+ * fallback về list tĩnh nếu GPS không sẵn sàng (ui_flow.md mục 5.4).
  * AGENTS.md rule 9.3: "Hiển thị SkeletonLoader khi fetch, không để trắng."
  */
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import CafeCard from "../components/CafeCard";
 import SkeletonLoader from "../components/SkeletonLoader";
+import {
+  DEFAULT_DISTANCE_FILTER,
+  DISTANCE_FILTER_OPTIONS,
+} from "../constants";
 
 export default function CafeListScreen({
   cafes,
   loading,
   error,
   onFetchCafes,
+  onGetCurrentPosition,
   onGoHome,
 }) {
+  const [selectedFilter, setSelectedFilter] = useState(DEFAULT_DISTANCE_FILTER);
+  const [hasLocation, setHasLocation] = useState(false);
+  const [resolvingLocation, setResolvingLocation] = useState(false);
+  const isLoading = loading || resolvingLocation;
+
+  const loadCafes = useCallback(async () => {
+    const filter = DISTANCE_FILTER_OPTIONS.find(
+      (option) => option.value === selectedFilter
+    );
+    setResolvingLocation(true);
+    const position = await onGetCurrentPosition?.();
+    setResolvingLocation(false);
+
+    if (!position) {
+      setHasLocation(false);
+      await onFetchCafes();
+      return;
+    }
+
+    setHasLocation(true);
+    await onFetchCafes({ position, radius: filter?.radius ?? null });
+  }, [onFetchCafes, onGetCurrentPosition, selectedFilter]);
+
   useEffect(() => {
-    onFetchCafes();
-  }, [onFetchCafes]);
+    const timeoutId = window.setTimeout(() => {
+      loadCafes();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loadCafes]);
 
   return (
     <div className="flex-1 flex flex-col px-5 py-6 animate-fade-in">
       {/* Header */}
       <h2 className="text-lg font-bold text-white mb-4">
-        Danh sách quán cafe
+        Quán gần bạn nhất
       </h2>
+
+      {hasLocation && (
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {DISTANCE_FILTER_OPTIONS.map((option) => {
+            const isActive = selectedFilter === option.value;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setSelectedFilter(option.value)}
+                disabled={isLoading}
+                className={`h-10 rounded-lg text-sm font-medium border transition-all
+                  disabled:opacity-60 disabled:cursor-not-allowed
+                  ${
+                    isActive
+                      ? "bg-brand-500 text-white border-brand-400"
+                      : "bg-surface border-slate-700 text-slate-300 hover:border-slate-500"
+                  }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Error + Retry */}
       {error && (
         <div className="mb-4 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm animate-scale-in">
           <p>{error}</p>
           <button
-            onClick={onFetchCafes}
+            onClick={loadCafes}
             className="mt-2 text-brand-400 font-medium text-sm hover:text-brand-300"
           >
             Thử lại
@@ -43,7 +101,7 @@ export default function CafeListScreen({
 
       {/* Content: Skeleton → List → Empty */}
       <div className="flex-1 flex flex-col gap-3">
-        {loading ? (
+        {isLoading ? (
           <SkeletonLoader count={3} />
         ) : cafes.length > 0 ? (
           cafes.map((cafe) => <CafeCard key={cafe.cafe_id} cafe={cafe} />)

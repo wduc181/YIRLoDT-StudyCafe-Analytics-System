@@ -81,6 +81,40 @@ export default function useGps() {
     });
   }, []);
 
+  /** Lấy vị trí hiện tại cho các màn cần GPS một lần (ví dụ S4). */
+  const getCurrentPosition = useCallback(async () => {
+    if (!navigator.geolocation) {
+      setGpsStatus(GPS_STATUS.ERROR);
+      setError("Trình duyệt không hỗ trợ GPS");
+      return null;
+    }
+
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setGpsStatus((prev) =>
+            prev === GPS_STATUS.TRACKING ? GPS_STATUS.TRACKING : GPS_STATUS.READY
+          );
+          setError(null);
+          resolve({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          });
+        },
+        (err) => {
+          setGpsStatus(GPS_STATUS.ERROR);
+          setError(
+            err.code === 1
+              ? "Bạn cần cho phép quyền vị trí để xem khoảng cách"
+              : "Không thể lấy vị trí hiện tại"
+          );
+          resolve(null);
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    });
+  }, []);
+
   /** Bắt đầu tracking mỗi 60 giây */
   const startTracking = useCallback(
     (sessionId, deviceId) => {
@@ -118,6 +152,7 @@ export default function useGps() {
     gpsCount,
     error,
     requestPermission,
+    getCurrentPosition,
     startTracking,
     stopTracking,
   };

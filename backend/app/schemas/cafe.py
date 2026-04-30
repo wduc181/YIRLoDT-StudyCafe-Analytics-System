@@ -15,14 +15,15 @@ class CafeResponse(BaseModel):
     radius_meters: int = 50
     behavior_score: float | None = None
     has_enough_data: bool = False
+    distance_meters: float | None = None
+    google_maps_url: str
 
     model_config = {"from_attributes": True}
 
 
 class CafeNearbyResponse(CafeResponse):
-    """Response schema cho GET /api/cafes/nearby — kế thừa CafeResponse + distance."""
+    """Backward-compatible schema name for cafe responses with distance."""
     distance_meters: float
-    google_maps_url: str
 
 
 class CafeCreate(BaseModel):

@@ -125,6 +125,7 @@ function App() {
             loading={cafes.loading}
             error={cafes.error}
             onFetchCafes={cafes.fetchCafes}
+            onGetCurrentPosition={gps.getCurrentPosition}
             onGoHome={handleGoHome}
             onGoToSuggest={handleGoToSuggest}
           />
