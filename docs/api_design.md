@@ -1,8 +1,8 @@
 # API Design Document
 ## StudyCafe Analytics System
 
-**Phiên bản:** v1.0  
-**Ngày cập nhật:** 18/04/2026
+**Phiên bản:** v1.1
+**Ngày cập nhật:** 30/04/2026
 
 ---
 
@@ -44,11 +44,10 @@ Mục tiêu của tài liệu:
 | POST | `/api/session/start` | Bắt đầu session |
 | POST | `/api/tracking` | Gửi GPS log |
 | POST | `/api/session/end` | Kết thúc session |
-| GET | `/api/cafes` | Lấy danh sách quán |
+| GET | `/api/cafes` | Lấy danh sách quán; hỗ trợ khoảng cách/filter khi có GPS |
 | GET | `/api/session/{session_id}` | Xem thông tin session |
 | GET | `/api/report/export` | Xuất báo cáo Excel |
 | POST | `/api/mock-data/import` | Nạp mock data để test |
-| GET | `/api/cafes/nearby` | Lấy quán gần nhất theo GPS [Optional] |
 | POST | `/api/cafes/suggest`               | Đề xuất thêm quán mới [Optional]     |
 | POST | `/api/admin/cafes/{cafe_id}/approve`| Admin duyệt quán pending [Optional]  |
 
@@ -174,9 +173,48 @@ Kết thúc session và trigger pipeline scoring nếu cần.
 ### 5.4 GET `/api/cafes`
 
 #### Mục đích
-Lấy danh sách quán cafe và điểm đánh giá hiện tại.
+Lấy danh sách quán cafe và điểm đánh giá hiện tại. Nếu frontend gửi kèm
+tọa độ GPS hiện tại, backend trả thêm khoảng cách, Google Maps URL, sort theo
+khoảng cách tăng dần và hỗ trợ filter theo bán kính.
+
+#### Query Parameters
+- `lat` (double, optional): Vĩ độ hiện tại.
+- `lng` (double, optional): Kinh độ hiện tại.
+- `radius` (integer, optional): Bán kính tìm kiếm (mét), chỉ có hiệu lực khi có đủ `lat` và `lng`.
+  - `5000`: lọc trong 5km.
+  - `10000`: lọc trong 10km.
+  - Không gửi param: không giới hạn khoảng cách.
+- `limit` (integer, optional): Số quán trả về, mặc định 20, tối đa 50.
+
+#### Logic xử lý
+1. Nếu không có `lat` và `lng`, trả danh sách quán active như hiện tại.
+2. Nếu có đủ `lat` và `lng`, tính khoảng cách Haversine từ user đến từng quán active.
+3. Nếu có `radius`, chỉ giữ quán có `distance_meters <= radius`.
+4. Sort theo khoảng cách tăng dần.
+5. Trả về top N theo `limit`.
+
+#### Quy ước filter frontend
+
+| UI filter | Query gửi lên backend |
+|---|---|
+| 5km | `/api/cafes?lat=...&lng=...&radius=5000` |
+| 10km | `/api/cafes?lat=...&lng=...&radius=10000` |
+| Không giới hạn | `/api/cafes?lat=...&lng=...` |
+
+#### Google Maps URL
+Không cần API Key. Ghép từ tọa độ quán:
+```python
+# Mở pin tọa độ quán
+f"https://www.google.com/maps?q={cafe.center_lat},{cafe.center_lng}"
+
+# Hoặc mở chỉ đường từ user
+f"https://www.google.com/maps/dir/?api=1&destination={cafe.center_lat},{cafe.center_lng}"
+```
 
 #### Response 200
+Khi request không có `lat`/`lng`, `distance_meters` và `google_maps_url` có thể
+không được trả về hoặc có giá trị `null`.
+
 ```json
 [
   {
@@ -187,9 +225,21 @@ Lấy danh sách quán cafe và điểm đánh giá hiện tại.
     "center_lng": 105.8542,
     "radius_meters": 50,
     "behavior_score": 8.3,
-    "has_enough_data": true
+    "has_enough_data": true,
+    "distance_meters": 230,
+    "google_maps_url": "https://www.google.com/maps?q=21.0285,105.8542"
   }
 ]
+```
+
+#### Response 400
+```json
+{ "status": "error", "message": "lat and lng must be provided together" }
+```
+
+#### Response 422
+```json
+{ "status": "error", "message": "invalid radius" }
 ```
 
 ---
@@ -251,57 +301,7 @@ Nạp mock data để test pipeline mà không cần đi thực tế.
 }
 ```
 
-### 5.8 GET `/api/cafes/nearby` [Optional]
-
-#### Mục đích
-Trả về danh sách quán gần nhất dựa trên tọa độ hiện tại của user,
-kèm đánh giá của hệ thống và link Google Maps.
-
-#### Query Parameters
-- `lat` (double): Vĩ độ hiện tại.
-- `lng` (double): Kinh độ hiện tại.
-- `radius` (integer, optional): Bán kính tìm kiếm (mét), mặc định 500.
-- `limit` (integer, optional): Số quán trả về, mặc định 5, tối đa 10
-
-#### Logic xử lý
-1. Nhận lat/lng từ query param
-2. Tính khoảng cách Haversine từ user đến từng quán trong bảng `cafes`
-3. Sort theo khoảng cách tăng dần
-4. Trả về top N
-
-#### Google Maps URL
-Không cần API Key. Ghép từ tọa độ quán:
-```python
-# Mở pin tọa độ quán
-f"https://www.google.com/maps?q={cafe.center_lat},{cafe.center_lng}"
-
-# Hoặc mở chỉ đường từ user
-f"https://www.google.com/maps/dir/?api=1&destination={cafe.center_lat},{cafe.center_lng}"
-```
-
-#### Response 200
-```json
-[
-  {
-    "cafe_id": 1,
-    "name": "Cafe A",
-    "address": "123 Phố X",
-    "distance_meters": 230,
-    "center_lat": 21.0285,
-    "center_lng": 105.8542,
-    "behavior_score": 8.3,
-    "has_enough_data": true,
-    "google_maps_url": "https://www.google.com/maps?q=21.0285,105.8542"
-  }
-]
-```
-
-#### Response 400
-```json
-{ "status": "error", "message": "lat and lng are required" }
-```
-
-### 5.9 POST `/api/cafes/suggest` [Optional]
+### 5.8 POST `/api/cafes/suggest` [Optional]
 
 #### Mục đích
 Nhận thông tin quán mới do user đề xuất, tọa độ đã được resolve
@@ -323,7 +323,7 @@ từ Google Places ở phía frontend trước khi gửi lên.
 - `google_place_id` lưu lại để sau này có thể dùng tạo Google Maps URL
   chính xác theo Place thay vì chỉ dùng tọa độ.
 - Quán tạo ra mặc định có `status = 'pending'`.
-- Không hiển thị trong `/api/cafes` hay `/api/cafes/nearby` cho đến
+- Không hiển thị trong `/api/cafes` cho đến
   khi được admin approve.
 
 #### Response 200
@@ -338,7 +338,7 @@ từ Google Places ở phía frontend trước khi gửi lên.
 
 ---
 
-### 5.10 POST `/api/admin/cafes/{cafe_id}/approve` [Optional — Internal]
+### 5.9 POST `/api/admin/cafes/{cafe_id}/approve` [Optional — Internal]
 
 #### Mục đích
 Admin kích hoạt một quán đang ở trạng thái pending.
@@ -610,3 +610,7 @@ CREATE TABLE cafe_scores (
 
 ### v1.0
 - Phát hành phiên bản chính thức 1.0
+
+### v1.1
+- Chốt `GET /api/cafes` là endpoint duy nhất cho danh sách quán.
+- Bổ sung query `lat`, `lng`, `radius`, `limit` để trả `distance_meters`, sort gần đến xa và filter bán kính 5km/10km/không giới hạn.

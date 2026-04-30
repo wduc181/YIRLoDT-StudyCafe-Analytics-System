@@ -1,8 +1,8 @@
 # UI Flow Document
 ## StudyCafe Analytics System
 
-**Phiên bản:** v1.0 
-**Ngày cập nhật:** 18/04/2026
+**Phiên bản:** v1.1
+**Ngày cập nhật:** 30/04/2026
 
 ---
 
@@ -178,6 +178,7 @@ kèm điểm đánh giá hành vi và link Google Maps.
 
 #### Thành phần chính
 - Danh sách quán sort theo khoảng cách tăng dần
+- Bộ lọc giới hạn khoảng cách: 5km, 10km, không giới hạn
 - Mỗi item gồm:
   - Tên quán
   - Địa chỉ ngắn
@@ -191,6 +192,7 @@ kèm điểm đánh giá hành vi và link Google Maps.
 ```
 ┌─────────────────────────────┐
 │  Quán gần bạn nhất          │
+│  [ 5km ] [ 10km ] [ Tất cả ]│
 │                             │
 │  Cafe A              230m   │
 │  123 Phố X                  │
@@ -214,11 +216,15 @@ kèm điểm đánh giá hành vi và link Google Maps.
 
 #### Hành vi
 - Khi vào màn này, frontend lấy GPS hiện tại và gọi
-  `GET /api/cafes/nearby?lat=...&lng=...`
+  `GET /api/cafes?lat=...&lng=...&radius=5000`
+- Filter mặc định là 5km.
+- Khi user chọn 10km, frontend gọi lại `GET /api/cafes?lat=...&lng=...&radius=10000`.
+- Khi user chọn "Không giới hạn", frontend gọi lại `GET /api/cafes?lat=...&lng=...` và không gửi `radius`.
+- Danh sách luôn hiển thị theo thứ tự gần đến xa dựa trên response backend.
 - Hiển thị khoảng cách dạng "230m" nếu < 1000m, "1.2km" nếu >= 1000m.
 - Nút "Mở Maps" mở Google Maps URL trong tab mới.
 - Nếu GPS không sẵn sàng → fallback về list tĩnh `GET /api/cafes`
-  và không hiển thị khoảng cách.
+  và không hiển thị khoảng cách hoặc bộ lọc khoảng cách.
 
 ---
 
@@ -388,3 +394,7 @@ thông qua Google Places Autocomplete.
 
 ### v1.0
 - Phát hành phiên bản chính thức 1.0
+
+### v1.1
+- Bổ sung filter khoảng cách cho S4: 5km, 10km, không giới hạn.
+- Chốt S4 dùng `/api/cafes` với query GPS để nhận `distance_meters` và danh sách sort gần đến xa.

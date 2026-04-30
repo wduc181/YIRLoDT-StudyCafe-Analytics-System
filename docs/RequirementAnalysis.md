@@ -1,7 +1,7 @@
 # Requirement Analysis Document
 ## StudyCafe Analytics System
-**Phiên bản:** v1.0
-**Ngày cập nhật:** 18/04/2026  
+**Phiên bản:** v1.1
+**Ngày cập nhật:** 30/04/2026
 
 ---
 
@@ -33,6 +33,7 @@ Trong phạm vi đồ án, hệ thống cần:
 - Thu thập GPS từ trình duyệt điện thoại.
 - Lưu dữ liệu GPS theo session.
 - Quản lý danh sách quán cafe mẫu.
+- Hiển thị danh sách quán theo khoảng cách từ GPS hiện tại, có bộ lọc 5km/10km/không giới hạn.
 - Xử lý dữ liệu GPS để phục vụ đánh giá hành vi.
 - Tính điểm đánh giá quán dựa trên hành vi.
 - Xuất báo cáo dạng `.xlsx`.
@@ -175,9 +176,11 @@ Trong khi session đang hoạt động, hệ thống phải gửi dữ liệu GP
 ### FR-A5 — Hiển thị trạng thái session
 Frontend phải hiển thị rõ trạng thái hiện tại: chưa bắt đầu, đang tracking, đã kết thúc.
 
-### FR-A6 — Hiển thị quán gần nhất [Optional]
+### FR-A6 — Hiển thị quán gần nhất
 Khi user vào màn danh sách quán, hệ thống lấy GPS hiện tại và hiển thị
 các quán gần nhất theo khoảng cách thực tế, bên cạnh đó là rating và link dẫn ra google map của quán.
+Danh sách phải được sắp xếp từ gần đến xa và có bộ lọc giới hạn khoảng cách:
+5km, 10km, hoặc không giới hạn.
 
 ### FR-A7 — Giao diện đề xuất quán mới [Optional]
 Frontend cung cấp ô tìm kiếm tên quán tích hợp Google Places
@@ -206,10 +209,11 @@ Backend phải có cơ chế truy xuất dữ liệu GPS/session để đưa san
 ### FR-B6 — Hỗ trợ mock data
 Backend phải cho phép nạp dữ liệu GPS giả lập để kiểm thử và demo.
 
-### FR-B7 — API tìm quán gần nhất [Optional]
-Backend cung cấp endpoint nhận tọa độ GPS của user và trả về danh sách
+### FR-B7 — API danh sách quán theo vị trí
+Backend cung cấp endpoint danh sách quán có thể nhận tọa độ GPS của user và trả về danh sách
 quán được sắp xếp theo khoảng cách tăng dần, kèm điểm đánh giá của hệ thống và
-Google Maps URL.
+Google Maps URL. Endpoint phải hỗ trợ lọc theo bán kính 5km, 10km, hoặc không
+giới hạn khoảng cách.
 
 ### FR-B8 — Cho phép user đề xuất thêm quán mới [Optional]
 User có thể submit một quán chưa có trong hệ thống thông qua Google
@@ -362,3 +366,7 @@ Sau RA v0.2, bộ tài liệu dự kiến gồm:
 
 ## v1.0
 - Phát hành phiên bản chính thức 1.0
+
+## v1.1
+- Chuyển tính năng danh sách quán gần nhất từ optional sang core.
+- Bổ sung yêu cầu hiển thị khoảng cách GPS, sort gần đến xa và lọc theo 5km/10km/không giới hạn trên endpoint danh sách quán.
