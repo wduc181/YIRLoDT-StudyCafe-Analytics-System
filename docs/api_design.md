@@ -181,8 +181,7 @@ khoảng cách tăng dần và hỗ trợ filter theo bán kính.
 - `lat` (double, optional): Vĩ độ hiện tại.
 - `lng` (double, optional): Kinh độ hiện tại.
 - `radius` (integer, optional): Bán kính tìm kiếm (mét), chỉ có hiệu lực khi có đủ `lat` và `lng`.
-  - `5000`: lọc trong 5km.
-  - `10000`: lọc trong 10km.
+  - Chấp nhận mọi số nguyên dương.
   - Không gửi param: không giới hạn khoảng cách.
 - `limit` (integer, optional): Số quán trả về, mặc định 20, tối đa 50.
 
@@ -201,6 +200,9 @@ khoảng cách tăng dần và hỗ trợ filter theo bán kính.
 | 10km | `/api/cafes?lat=...&lng=...&radius=10000` |
 | Không giới hạn | `/api/cafes?lat=...&lng=...` |
 
+Các mốc filter hiển thị trên frontend phải khai báo tập trung trong
+`frontend/src/constants/index.js`, không hardcode rải trong component/hook.
+
 #### Google Maps URL
 Không cần API Key. Ghép từ tọa độ quán:
 ```python
@@ -212,8 +214,8 @@ f"https://www.google.com/maps/dir/?api=1&destination={cafe.center_lat},{cafe.cen
 ```
 
 #### Response 200
-Khi request không có `lat`/`lng`, `distance_meters` và `google_maps_url` có thể
-không được trả về hoặc có giá trị `null`.
+`google_maps_url` luôn được trả về vì có thể dựng từ tọa độ quán. Khi request
+không có `lat`/`lng`, `distance_meters` không được trả về hoặc có giá trị `null`.
 
 ```json
 [
@@ -241,6 +243,9 @@ không được trả về hoặc có giá trị `null`.
 ```json
 { "status": "error", "message": "invalid radius" }
 ```
+
+Trả về khi `radius` có giá trị nhỏ hơn hoặc bằng 0, hoặc không parse được thành
+số nguyên hợp lệ.
 
 ---
 
@@ -613,4 +618,5 @@ CREATE TABLE cafe_scores (
 
 ### v1.1
 - Chốt `GET /api/cafes` là endpoint duy nhất cho danh sách quán.
-- Bổ sung query `lat`, `lng`, `radius`, `limit` để trả `distance_meters`, sort gần đến xa và filter bán kính 5km/10km/không giới hạn.
+- Bổ sung query `lat`, `lng`, `radius`, `limit` để trả `distance_meters`, sort gần đến xa và filter theo bán kính dương bất kỳ.
+- Chốt frontend chỉ expose các mốc 5km/10km/không giới hạn qua config chung, còn backend chấp nhận mọi `radius > 0`.

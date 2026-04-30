@@ -218,6 +218,8 @@ kèm điểm đánh giá hành vi và link Google Maps.
 - Khi vào màn này, frontend lấy GPS hiện tại và gọi
   `GET /api/cafes?lat=...&lng=...&radius=5000`
 - Filter mặc định là 5km.
+- Các option filter phải được khai báo trong `frontend/src/constants/index.js`
+  (ví dụ `DISTANCE_FILTER_OPTIONS`), không hardcode trong screen/hook.
 - Khi user chọn 10km, frontend gọi lại `GET /api/cafes?lat=...&lng=...&radius=10000`.
 - Khi user chọn "Không giới hạn", frontend gọi lại `GET /api/cafes?lat=...&lng=...` và không gửi `radius`.
 - Danh sách luôn hiển thị theo thứ tự gần đến xa dựa trên response backend.
@@ -398,3 +400,4 @@ thông qua Google Places Autocomplete.
 ### v1.1
 - Bổ sung filter khoảng cách cho S4: 5km, 10km, không giới hạn.
 - Chốt S4 dùng `/api/cafes` với query GPS để nhận `distance_meters` và danh sách sort gần đến xa.
+- Chốt các mốc filter S4 nằm trong config frontend chung.
