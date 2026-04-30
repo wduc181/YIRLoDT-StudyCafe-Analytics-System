@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.internal.geo_resolver import resolve_nearest_cafe
 from app.models.session import Session
 from app.models.gps_log import GpsLog
 from app.schemas.tracking import TrackingRequest, TrackingResponse
@@ -61,7 +62,11 @@ async def record_gps(db: AsyncSession, data: TrackingRequest) -> TrackingRespons
     else:
         log_id = row[0]
 
-    # TODO: Nếu GPS đầu tiên và session chưa có cafe_id,
-    # gọi geo_resolver.resolve_nearest_cafe() để cập nhật session.cafe_id
+    # Nếu đây là GPS đầu tiên và session chưa có cafe_id, thử resolve quán gần nhất.
+    if session.cafe_id is None:
+        nearest_cafe = await resolve_nearest_cafe(db, data.lat, data.lng)
+        if nearest_cafe is not None:
+            session.cafe_id = nearest_cafe.cafe_id
+            await db.commit()
 
     return TrackingResponse(status="ok", log_id=log_id)

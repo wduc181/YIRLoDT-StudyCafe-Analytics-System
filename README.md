@@ -44,6 +44,7 @@ Thiết lập biến môi trường:
 Khởi động hệ thống:
 - Mở terminal tại thư mục gốc của dự án và chạy lệnh:
   `docker compose up -d --build`
+- Sau khi backend sẵn sàng, service `mock-data` sẽ tự nạp mock data vào database qua endpoint `/api/mock-data/import`.
 
 Sau khi build xong, truy cập vào ứng dụng tại:
 - Frontend (Giao diện người dùng): http://localhost:5173
