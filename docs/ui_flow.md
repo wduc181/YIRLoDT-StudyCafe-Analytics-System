@@ -1,8 +1,8 @@
 # UI Flow Document
 ## StudyCafe Analytics System
 
-**Phiên bản:** v1.0 
-**Ngày cập nhật:** 18/04/2026
+**Phiên bản:** v1.1
+**Ngày cập nhật:** 30/04/2026
 
 ---
 
@@ -107,6 +107,7 @@ Cho user biết session đang chạy và hệ thống đang tracking GPS.
 
 #### Thành phần chính
 - Trạng thái: Đang theo dõi
+- Vị trí hiện tại: tên quán nếu backend resolve được từ GPS
 - Đồng hồ thời gian session (tăng real-time)
 - Số điểm GPS đã ghi nhận
 - Nút chính: **Kết thúc**
@@ -116,6 +117,8 @@ Cho user biết session đang chạy và hệ thống đang tracking GPS.
 ```
 ┌─────────────────────────────┐
 │  Đang theo dõi phiên học    │
+│                             │
+│  Vị trí: Cafe A             │
 │                             │
 │  ⏱  00:37:12               │
 │  📍 37 điểm GPS             │
@@ -131,6 +134,12 @@ Cho user biết session đang chạy và hệ thống đang tracking GPS.
 #### Hành vi
 - Đồng hồ tăng theo giây.
 - Frontend gửi GPS định kỳ mỗi 60 giây.
+- Sau mỗi lần gửi GPS, frontend đọc `current_cafe` và `scoring_eligible`
+  từ response `POST /api/tracking`.
+- Nếu `current_cafe` có giá trị → hiển thị `Vị trí của bạn: <tên quán>`.
+- Nếu `current_cafe = null` hoặc `scoring_eligible = false` → hiển thị:
+  "Không phát hiện quán trong cơ sở dữ liệu. Dữ liệu tính điểm sẽ không được
+  ghi lại, nhưng GPS vẫn tiếp tục được theo dõi."
 - Nếu GPS mất tạm thời → hiển thị cảnh báo nhẹ, không crash UI.
 - Nếu mạng mất → retry GPS request, không dừng session.
 
@@ -178,6 +187,7 @@ kèm điểm đánh giá hành vi và link Google Maps.
 
 #### Thành phần chính
 - Danh sách quán sort theo khoảng cách tăng dần
+- Bộ lọc giới hạn khoảng cách: 5km, 10km, không giới hạn
 - Mỗi item gồm:
   - Tên quán
   - Địa chỉ ngắn
@@ -191,6 +201,7 @@ kèm điểm đánh giá hành vi và link Google Maps.
 ```
 ┌─────────────────────────────┐
 │  Quán gần bạn nhất          │
+│  [ 5km ] [ 10km ] [ Tất cả ]│
 │                             │
 │  Cafe A              230m   │
 │  123 Phố X                  │
@@ -214,11 +225,17 @@ kèm điểm đánh giá hành vi và link Google Maps.
 
 #### Hành vi
 - Khi vào màn này, frontend lấy GPS hiện tại và gọi
-  `GET /api/cafes/nearby?lat=...&lng=...`
+  `GET /api/cafes?lat=...&lng=...&radius=5000`
+- Filter mặc định là 5km.
+- Các option filter phải được khai báo trong `frontend/src/constants/index.js`
+  (ví dụ `DISTANCE_FILTER_OPTIONS`), không hardcode trong screen/hook.
+- Khi user chọn 10km, frontend gọi lại `GET /api/cafes?lat=...&lng=...&radius=10000`.
+- Khi user chọn "Không giới hạn", frontend gọi lại `GET /api/cafes?lat=...&lng=...` và không gửi `radius`.
+- Danh sách luôn hiển thị theo thứ tự gần đến xa dựa trên response backend.
 - Hiển thị khoảng cách dạng "230m" nếu < 1000m, "1.2km" nếu >= 1000m.
 - Nút "Mở Maps" mở Google Maps URL trong tab mới.
 - Nếu GPS không sẵn sàng → fallback về list tĩnh `GET /api/cafes`
-  và không hiển thị khoảng cách.
+  và không hiển thị khoảng cách hoặc bộ lọc khoảng cách.
 
 ---
 
@@ -369,8 +386,6 @@ thông qua Google Places Autocomplete.
 ## 12. Open items
 
 - Có cần thêm màn debug nội bộ cho team test không?
-- Có hiển thị tên quán đang ngồi ngay trên S2 không
-  (cần backend resolve cafe_id trước khi hiển thị)?
 - Có cần badge "Mock Data Mode" khi chạy demo không?
 
 ---
@@ -388,3 +403,8 @@ thông qua Google Places Autocomplete.
 
 ### v1.0
 - Phát hành phiên bản chính thức 1.0
+
+### v1.1
+- Bổ sung filter khoảng cách cho S4: 5km, 10km, không giới hạn.
+- Chốt S4 dùng `/api/cafes` với query GPS để nhận `distance_meters` và danh sách sort gần đến xa.
+- Chốt các mốc filter S4 nằm trong config frontend chung.

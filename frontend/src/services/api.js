@@ -83,13 +83,36 @@ export async function sendGpsLog(data) {
 // ─── Cafes ───────────────────────────────────────
 
 /** GET /api/cafes */
-export async function getCafes() {
-  return request("/api/cafes");
+export async function getCafes({ lat, lng, radius, limit } = {}) {
+  const params = new URLSearchParams();
+
+  if (lat != null && lng != null) {
+    params.set("lat", String(lat));
+    params.set("lng", String(lng));
+  }
+  if (radius != null) params.set("radius", String(radius));
+  if (limit != null) params.set("limit", String(limit));
+
+  const query = params.toString();
+  return request(query ? `/api/cafes?${query}` : "/api/cafes");
 }
 
-/** GET /api/cafes/nearby — [Optional] */
-export async function getNearbyCafes(lat, lng, radius = 500, limit = 5) {
-  return request(`/api/cafes/nearby?lat=${lat}&lng=${lng}&radius=${radius}&limit=${limit}`);
+// ─── Report ──────────────────────────────────────
+
+function filenameFromContentDisposition(header) {
+  const match = header?.match(/filename="?([^"]+)"?/i);
+  return match?.[1] || "studycafe_report.xlsx";
+}
+
+/** GET /api/report/export */
+export async function exportReport() {
+  const response = await request("/api/report/export");
+  const blob = await response.blob();
+  const filename = filenameFromContentDisposition(
+    response.headers.get("content-disposition")
+  );
+
+  return { blob, filename };
 }
 
 // ─── Mock Data ───────────────────────────────────

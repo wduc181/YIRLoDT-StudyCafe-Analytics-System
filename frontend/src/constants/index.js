@@ -29,3 +29,12 @@ export const SCREENS = {
   CAFE_LIST: 'cafe_list',      // S4
   SUGGEST_CAFE: 'suggest',     // S5 [Optional]
 };
+
+// S4 distance filters. Backend accepts any positive radius; UI exposes fixed options.
+export const DISTANCE_FILTER_OPTIONS = [
+  { value: '5km', label: '5km', radius: 5000 },
+  { value: '10km', label: '10km', radius: 10000 },
+  { value: 'all', label: 'Tất cả', radius: null },
+];
+
+export const DEFAULT_DISTANCE_FILTER = '5km';

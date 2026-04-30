@@ -13,12 +13,15 @@ export default function useCafes() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  /** Fetch danh sách quán tĩnh (fallback khi không có GPS) */
-  const fetchCafes = useCallback(async () => {
+  /** Fetch danh sách quán. Nếu có GPS, backend trả thêm distance và sort gần đến xa. */
+  const fetchCafes = useCallback(async ({ position = null, radius = null } = {}) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getCafes();
+      const params = position
+        ? { lat: position.lat, lng: position.lng, radius }
+        : {};
+      const data = await getCafes(params);
       setCafes(data);
     } catch (err) {
       setError(err.message);

@@ -31,7 +31,15 @@ class TrackingRequest(BaseModel):
         return v
 
 
+class TrackingCafe(BaseModel):
+    """Thông tin quán hiện tại resolve được từ GPS."""
+    cafe_id: int
+    name: str
+
+
 class TrackingResponse(BaseModel):
     """Response cho POST /api/tracking."""
     status: str = "ok"
     log_id: int
+    current_cafe: TrackingCafe | None = None
+    scoring_eligible: bool = False

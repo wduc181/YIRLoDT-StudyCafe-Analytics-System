@@ -13,6 +13,8 @@ export default function SessionActiveScreen({
   gpsStatus,
   gpsCount,
   gpsError,
+  currentCafe,
+  scoringEligible,
   onEndSession,
   loading,
 }) {
@@ -26,6 +28,23 @@ export default function SessionActiveScreen({
       <h2 className="text-lg font-semibold text-white mt-4 mb-8">
         Đang theo dõi phiên học
       </h2>
+
+      {/* Vị trí quán hiện tại */}
+      <div className="w-full max-w-xs mb-6 px-4 py-3 rounded-lg bg-surface border border-slate-700 text-center">
+        {currentCafe ? (
+          <>
+            <p className="text-xs text-slate-400 mb-1">Vị trí của bạn</p>
+            <p className="text-sm font-semibold text-white">{currentCafe.name}</p>
+          </>
+        ) : scoringEligible === false ? (
+          <p className="text-sm text-yellow-300 leading-relaxed">
+            Không phát hiện quán trong cơ sở dữ liệu. Dữ liệu tính điểm sẽ không
+            được ghi lại, nhưng GPS vẫn tiếp tục được theo dõi.
+          </p>
+        ) : (
+          <p className="text-sm text-slate-400">Đang xác định vị trí quán...</p>
+        )}
+      </div>
 
       {/* Đồng hồ HH:MM:SS */}
       <div className="mb-8">

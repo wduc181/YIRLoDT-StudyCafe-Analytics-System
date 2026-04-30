@@ -15,6 +15,8 @@ export default function useGps() {
   const [gpsStatus, setGpsStatus] = useState(GPS_STATUS.IDLE);
   const [gpsCount, setGpsCount] = useState(0);
   const [error, setError] = useState(null);
+  const [currentCafe, setCurrentCafe] = useState(null);
+  const [scoringEligible, setScoringEligible] = useState(null);
   const intervalRef = useRef(null);
   const watchRef = useRef(null);
 
@@ -53,7 +55,7 @@ export default function useGps() {
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
           try {
-            await sendGpsLog({
+            const response = await sendGpsLog({
               sessionId,
               deviceId,
               lat: pos.coords.latitude,
@@ -61,6 +63,8 @@ export default function useGps() {
               accuracy: pos.coords.accuracy,
               timestamp: new Date().toISOString(),
             });
+            setCurrentCafe(response.current_cafe ?? null);
+            setScoringEligible(Boolean(response.scoring_eligible));
             setGpsCount((prev) => prev + 1);
             setError(null);
           } catch (err) {
@@ -81,12 +85,48 @@ export default function useGps() {
     });
   }, []);
 
+  /** Lấy vị trí hiện tại cho các màn cần GPS một lần (ví dụ S4). */
+  const getCurrentPosition = useCallback(async () => {
+    if (!navigator.geolocation) {
+      setGpsStatus(GPS_STATUS.ERROR);
+      setError("Trình duyệt không hỗ trợ GPS");
+      return null;
+    }
+
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setGpsStatus((prev) =>
+            prev === GPS_STATUS.TRACKING ? GPS_STATUS.TRACKING : GPS_STATUS.READY
+          );
+          setError(null);
+          resolve({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          });
+        },
+        (err) => {
+          setGpsStatus(GPS_STATUS.ERROR);
+          setError(
+            err.code === 1
+              ? "Bạn cần cho phép quyền vị trí để xem khoảng cách"
+              : "Không thể lấy vị trí hiện tại"
+          );
+          resolve(null);
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    });
+  }, []);
+
   /** Bắt đầu tracking mỗi 60 giây */
   const startTracking = useCallback(
     (sessionId, deviceId) => {
       setGpsStatus(GPS_STATUS.TRACKING);
       setGpsCount(0);
       setError(null);
+      setCurrentCafe(null);
+      setScoringEligible(null);
 
       // Gửi ngay lần đầu
       sendPosition(sessionId, deviceId);
@@ -117,7 +157,10 @@ export default function useGps() {
     gpsStatus,
     gpsCount,
     error,
+    currentCafe,
+    scoringEligible,
     requestPermission,
+    getCurrentPosition,
     startTracking,
     stopTracking,
   };

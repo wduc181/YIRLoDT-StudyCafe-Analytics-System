@@ -12,6 +12,7 @@ import { SCREENS } from "./constants";
 import useGps from "./hooks/useGps";
 import useSession from "./hooks/useSession";
 import useCafes from "./hooks/useCafes";
+import useReportExport from "./hooks/useReportExport";
 
 import HomeScreen from "./screens/HomeScreen";
 import SessionActiveScreen from "./screens/SessionActiveScreen";
@@ -32,6 +33,7 @@ function App() {
   const gps = useGps();
   const session = useSession();
   const cafes = useCafes();
+  const reportExport = useReportExport();
 
   // ─── Navigation Handlers (ui_flow.md mục 6) ────────────
 
@@ -103,6 +105,8 @@ function App() {
             gpsStatus={gps.gpsStatus}
             gpsCount={gps.gpsCount}
             gpsError={gps.error}
+            currentCafe={gps.currentCafe}
+            scoringEligible={gps.scoringEligible}
             onEndSession={handleEndSession}
             loading={session.loading}
           />
@@ -125,6 +129,10 @@ function App() {
             loading={cafes.loading}
             error={cafes.error}
             onFetchCafes={cafes.fetchCafes}
+            onGetCurrentPosition={gps.getCurrentPosition}
+            onExportCafes={reportExport.exportCafeReport}
+            exporting={reportExport.exporting}
+            exportError={reportExport.exportError}
             onGoHome={handleGoHome}
             onGoToSuggest={handleGoToSuggest}
           />
