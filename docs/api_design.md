@@ -113,12 +113,30 @@ Nhận một điểm GPS từ frontend trong lúc session đang diễn ra.
 - Backend cần kiểm tra `session_id` tồn tại.
 - Backend cần chống duplicate cơ bản theo `(session_id, timestamp)`.
 - Nếu đây là GPS đầu tiên và session chưa có `cafe_id`, backend có thể resolve quán gần nhất.
+- Response cần trả trạng thái quán hiện tại để frontend hiển thị trên S2.
+- Nếu không resolve được quán trong cơ sở dữ liệu, backend vẫn lưu GPS log nhưng session không đủ điều kiện ghi điểm quán.
 
 #### Response 200
 ```json
 {
   "status": "ok",
-  "log_id": 123
+  "log_id": 123,
+  "current_cafe": {
+    "cafe_id": 1,
+    "name": "Cafe A"
+  },
+  "scoring_eligible": true
+}
+```
+
+Nếu không phát hiện quán trong cơ sở dữ liệu:
+
+```json
+{
+  "status": "ok",
+  "log_id": 123,
+  "current_cafe": null,
+  "scoring_eligible": false
 }
 ```
 

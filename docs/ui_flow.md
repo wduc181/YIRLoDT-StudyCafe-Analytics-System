@@ -107,6 +107,7 @@ Cho user biết session đang chạy và hệ thống đang tracking GPS.
 
 #### Thành phần chính
 - Trạng thái: Đang theo dõi
+- Vị trí hiện tại: tên quán nếu backend resolve được từ GPS
 - Đồng hồ thời gian session (tăng real-time)
 - Số điểm GPS đã ghi nhận
 - Nút chính: **Kết thúc**
@@ -116,6 +117,8 @@ Cho user biết session đang chạy và hệ thống đang tracking GPS.
 ```
 ┌─────────────────────────────┐
 │  Đang theo dõi phiên học    │
+│                             │
+│  Vị trí: Cafe A             │
 │                             │
 │  ⏱  00:37:12               │
 │  📍 37 điểm GPS             │
@@ -131,6 +134,12 @@ Cho user biết session đang chạy và hệ thống đang tracking GPS.
 #### Hành vi
 - Đồng hồ tăng theo giây.
 - Frontend gửi GPS định kỳ mỗi 60 giây.
+- Sau mỗi lần gửi GPS, frontend đọc `current_cafe` và `scoring_eligible`
+  từ response `POST /api/tracking`.
+- Nếu `current_cafe` có giá trị → hiển thị `Vị trí của bạn: <tên quán>`.
+- Nếu `current_cafe = null` hoặc `scoring_eligible = false` → hiển thị:
+  "Không phát hiện quán trong cơ sở dữ liệu. Dữ liệu tính điểm sẽ không được
+  ghi lại, nhưng GPS vẫn tiếp tục được theo dõi."
 - Nếu GPS mất tạm thời → hiển thị cảnh báo nhẹ, không crash UI.
 - Nếu mạng mất → retry GPS request, không dừng session.
 
@@ -377,8 +386,6 @@ thông qua Google Places Autocomplete.
 ## 12. Open items
 
 - Có cần thêm màn debug nội bộ cho team test không?
-- Có hiển thị tên quán đang ngồi ngay trên S2 không
-  (cần backend resolve cafe_id trước khi hiển thị)?
 - Có cần badge "Mock Data Mode" khi chạy demo không?
 
 ---
