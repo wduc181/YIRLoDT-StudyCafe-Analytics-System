@@ -87,6 +87,12 @@ async def end_session(
             detail={"status": "error", "message": "session not found"},
         )
 
+    if session.status == "completed":
+        raise HTTPException(
+            status_code=409,
+            detail={"status": "error", "message": "session already ended"},
+        )
+
     now = datetime.now(timezone.utc)
     duration = (now - session.start_time).total_seconds() / 60.0
 

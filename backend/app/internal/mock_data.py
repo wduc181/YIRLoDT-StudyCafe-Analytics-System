@@ -48,6 +48,7 @@ async def import_mock_data(db: AsyncSession) -> dict:
     # Mock sessions + GPS logs
     total_sessions = 0
     total_logs = 0
+    session_ids: list[str] = []
     base_time = datetime.now(timezone.utc) - timedelta(days=7)
 
     for cafe in mock_cafes:
@@ -67,6 +68,7 @@ async def import_mock_data(db: AsyncSession) -> dict:
             )
             db.add(session)
             cafe_sessions.append((session, session_start, session_duration_min))
+            session_ids.append(str(session.session_id))
             total_sessions += 1
 
         # Flush theo batch để đảm bảo sessions tồn tại trước khi insert GPS logs.
@@ -93,4 +95,5 @@ async def import_mock_data(db: AsyncSession) -> dict:
     return {
         "imported_sessions": total_sessions,
         "imported_logs": total_logs,
+        "session_ids": session_ids,
     }

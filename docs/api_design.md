@@ -320,9 +320,14 @@ Nạp mock data để test pipeline mà không cần đi thực tế.
 {
   "status": "ok",
   "imported_sessions": 30,
-  "imported_logs": 1800
+  "imported_logs": 1800,
+  "scoring_triggered": 30
 }
 ```
+
+#### Ghi chú demo
+- Sau khi import mock data, backend trigger scoring background cho từng
+  session đã import để màn danh sách quán có điểm trong demo.
 
 ### 5.8 POST `/api/cafes/suggest` [Optional]
 

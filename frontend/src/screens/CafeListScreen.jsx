@@ -24,6 +24,7 @@ export default function CafeListScreen({
   exporting,
   exportError,
   onGoHome,
+  onGoToSuggest,
 }) {
   const [selectedFilter, setSelectedFilter] = useState(DEFAULT_DISTANCE_FILTER);
   const [hasLocation, setHasLocation] = useState(false);
@@ -140,11 +141,23 @@ export default function CafeListScreen({
         )}
       </div>
 
+      {/* Nút đề xuất quán mới [Optional] */}
+      <button
+        type="button"
+        onClick={onGoToSuggest}
+        className="w-full h-11 mt-4 rounded-xl text-white font-semibold text-sm
+          bg-brand-500 hover:bg-brand-400 disabled:opacity-60
+          disabled:cursor-not-allowed active:scale-[0.98] transition-all"
+      >
+        + Đề xuất quán mới
+      </button>
+
       {/* Nút về Home */}
       <button
+        type="button"
         id="btn-go-home-from-cafes"
         onClick={onGoHome}
-        className="w-full h-11 mt-4 rounded-xl text-slate-300 font-medium text-sm
+        className="w-full h-11 mt-3 rounded-xl text-slate-300 font-medium text-sm
           border border-slate-700 hover:border-slate-600 hover:bg-surface
           active:scale-[0.98] transition-all"
       >
