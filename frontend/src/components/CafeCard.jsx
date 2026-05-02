@@ -11,7 +11,7 @@
 import formatDistance from "../utils/formatDistance";
 
 export default function CafeCard({ cafe }) {
-  const mapsUrl = `https://www.google.com/maps?q=${cafe.center_lat},${cafe.center_lng}`;
+  const mapsUrl = cafe.google_maps_url;
 
   return (
     <div className="bg-surface rounded-xl p-4 border border-slate-700 animate-fade-in">

@@ -309,11 +309,7 @@ Content-Disposition: attachment; filename="studycafe_report.xlsx"
 Nạp mock data để test pipeline mà không cần đi thực tế.
 
 #### Request Body
-```json
-{
-  "source": "mock_dataset_v1"
-}
-```
+Không yêu cầu body — endpoint import bộ dữ liệu mock mặc định.
 
 #### Response 200
 ```json

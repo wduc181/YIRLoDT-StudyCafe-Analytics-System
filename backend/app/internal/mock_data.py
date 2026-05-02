@@ -20,8 +20,12 @@ async def import_mock_data(db: AsyncSession) -> dict:
     Tạo sessions + GPS logs giả lập.
     Trả về số sessions và logs đã import.
     """
-    # Reset dữ liệu mock cũ để endpoint có thể gọi lại nhiều lần mà không bị nhân bản.
-    await db.execute(text("TRUNCATE TABLE gps_logs, sessions, cafes RESTART IDENTITY CASCADE"))
+    # Reset toàn bộ dữ liệu demo (bao gồm scoring results) để endpoint
+    # có thể gọi lại nhiều lần mà không bị nhân bản.
+    await db.execute(text(
+        "TRUNCATE TABLE session_results, cafe_scores, gps_logs, sessions, cafes "
+        "RESTART IDENTITY CASCADE"
+    ))
 
     # Mock cafes (Hà Nội area)
     mock_cafes = [
@@ -38,9 +42,9 @@ async def import_mock_data(db: AsyncSession) -> dict:
         Cafe(name="Test Location - Your Current GPS",
              address="Hanoi Test Point",
              center_lat=21.5945721, center_lng=105.8420725, radius_meters=30, status="active"),
-           Cafe(name="Test Location - Session Exact Match",
-               address="Hanoi Session Match Point",
-               center_lat=21.5941, center_lng=105.8432, radius_meters=30, status="active"),
+        Cafe(name="Test Location - Session Exact Match",
+             address="Hanoi Session Match Point",
+             center_lat=21.5941, center_lng=105.8432, radius_meters=30, status="active"),
     ]
     db.add_all(mock_cafes)
     await db.flush()

@@ -267,7 +267,7 @@ Kiểm tra `.gitignore` thấy đã có `.env` → file có thể đã được 
 
 ---
 
-## 8. Kết luận xác minh của coding agent
+## 8. Kết luận xác minh của tôi 
 
 Đã đối chiếu lại các findings với codebase hiện tại trên branch `fix/pre-demo-findings`.
 Kết luận tổng quan: phần lớn findings là đúng, nhưng một số mục cần hạ mức hoặc
