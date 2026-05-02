@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.cafe import Cafe
-from app.models.cafe_score import CafeScore
+from app.services.cafe_score_service import get_latest_scores_by_cafe_id
 
 
 async def generate_report(db: AsyncSession) -> io.BytesIO:
@@ -20,6 +20,10 @@ async def generate_report(db: AsyncSession) -> io.BytesIO:
     cafe_stmt = select(Cafe).where(Cafe.status == "active")
     cafe_result = await db.execute(cafe_stmt)
     cafes = cafe_result.scalars().all()
+    scores_by_cafe_id = await get_latest_scores_by_cafe_id(
+        db,
+        [cafe.cafe_id for cafe in cafes],
+    )
 
     # Tạo workbook
     wb = Workbook()
@@ -37,14 +41,7 @@ async def generate_report(db: AsyncSession) -> io.BytesIO:
 
     # Data rows
     for cafe in cafes:
-        score_stmt = (
-            select(CafeScore)
-            .where(CafeScore.cafe_id == cafe.cafe_id)
-            .order_by(CafeScore.computed_at.desc())
-            .limit(1)
-        )
-        score_result = await db.execute(score_stmt)
-        score = score_result.scalar_one_or_none()
+        score = scores_by_cafe_id.get(cafe.cafe_id)
 
         ws.append([
             cafe.cafe_id,

@@ -50,13 +50,18 @@ Sau khi build xong, truy cập vào ứng dụng tại:
 - Frontend (Giao diện người dùng): http://localhost:5173
 - Backend API (Swagger UI): http://localhost:8088/docs
 
+Khi chạy frontend local không qua Docker và không cấu hình `.env`, frontend
+mặc định gọi backend tại `http://localhost:8000`. Với Docker Compose,
+`VITE_API_BASE_URL` được set sẵn thành `http://localhost:8088` để khớp port
+public của backend container.
+
 Tắt hệ thống:
 - Khi muốn dừng toàn bộ các tiến trình:
   `docker compose down`
 
 ## 6. Tài liệu tham khảo (Documentation)
 Mọi quyết định luồng ứng dụng và thuật toán phân tích đều được ghi chép rõ ràng trong thư mục docs/:
-- docs/RequirementAnalysis.md: Yêu cầu chức năng tổng quan.
+- docs/requirement_analysis.md: Yêu cầu chức năng tổng quan.
 - docs/scoring_engine_design.md: Chi tiết công thức tính toán và AI pipeline.
 - docs/api_design.md: Cấu trúc database và thiết kế API RESTful.
 - docs/ui_flow.md: Sơ đồ tương tác luồng màn hình UI.

@@ -3,6 +3,8 @@ sessions.py — FastAPI Router: Session endpoints.
 Error format: {"status": "error", "message": "..."}.
 """
 
+from uuid import UUID
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -45,7 +47,7 @@ async def end_session(
 
 @router.get("/session/{session_id}", response_model=SessionResponse)
 async def get_session(
-    session_id: str,
+    session_id: UUID,
     db: AsyncSession = Depends(get_db),
 ):
     """Lấy chi tiết session để debug hoặc kiểm tra."""

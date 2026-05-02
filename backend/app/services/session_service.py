@@ -6,6 +6,7 @@ Mọi DB operation dùng async/await.
 import uuid
 import logging
 from datetime import datetime, timezone
+from uuid import UUID
 
 from fastapi import BackgroundTasks, HTTPException
 from sqlalchemy import select, func
@@ -87,6 +88,17 @@ async def end_session(
             detail={"status": "error", "message": "session not found"},
         )
 
+    if session.status == "completed":
+        # Idempotent: session đã kết thúc trước đó → trả lại kết quả hiện có.
+        # Re-trigger scoring background để recovery nếu task lần đầu chưa chạy.
+        background_tasks.add_task(_run_scoring_background, str(data.session_id))
+        return SessionEndResponse(
+            status="ok",
+            session_id=str(session.session_id),
+            ended_at=session.end_time,
+            duration_min=session.duration_min,
+        )
+
     now = datetime.now(timezone.utc)
     duration = (now - session.start_time).total_seconds() / 60.0
 
@@ -107,10 +119,10 @@ async def end_session(
     )
 
 
-async def get_session(db: AsyncSession, session_id: str) -> SessionResponse:
+async def get_session(db: AsyncSession, session_id: UUID) -> SessionResponse:
     """Lấy chi tiết session + gps_log_count."""
     stmt = select(Session).where(
-        Session.session_id == uuid.UUID(session_id)
+        Session.session_id == session_id
     )
     result = await db.execute(stmt)
     session = result.scalar_one_or_none()

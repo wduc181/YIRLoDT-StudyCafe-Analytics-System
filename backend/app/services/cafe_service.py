@@ -6,10 +6,12 @@ Mọi DB operation dùng async/await.
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.internal.haversine import haversine_distance
 from app.models.cafe import Cafe
 from app.models.cafe_score import CafeScore
 from app.schemas.cafe import CafeResponse
+from app.services.cafe_score_service import get_latest_scores_by_cafe_id
 
 
 def _google_maps_url(cafe: Cafe) -> str:
@@ -40,24 +42,20 @@ async def get_all_cafes(
     lat: float | None = None,
     lng: float | None = None,
     radius: int | None = None,
-    limit: int = 20,
+    limit: int = settings.NEARBY_CAFES_DEFAULT_LIMIT,
 ) -> list[CafeResponse]:
     """Lấy danh sách quán active, hỗ trợ khoảng cách/sort/filter khi có GPS."""
     stmt = select(Cafe).where(Cafe.status == "active")
     result = await db.execute(stmt)
     cafes = result.scalars().all()
+    scores_by_cafe_id = await get_latest_scores_by_cafe_id(
+        db,
+        [cafe.cafe_id for cafe in cafes],
+    )
 
     response = []
     for cafe in cafes:
-        # Lấy score mới nhất cho quán này
-        score_stmt = (
-            select(CafeScore)
-            .where(CafeScore.cafe_id == cafe.cafe_id)
-            .order_by(CafeScore.computed_at.desc())
-            .limit(1)
-        )
-        score_result = await db.execute(score_stmt)
-        score = score_result.scalar_one_or_none()
+        score = scores_by_cafe_id.get(cafe.cafe_id)
 
         distance_meters = None
         if lat is not None and lng is not None:

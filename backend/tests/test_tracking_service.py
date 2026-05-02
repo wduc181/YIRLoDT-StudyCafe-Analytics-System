@@ -127,7 +127,47 @@ def test_record_gps_returns_resolved_cafe(monkeypatch) -> None:
     assert session.cafe_id == cafe.cafe_id
     assert result.current_cafe.name == cafe.name
     assert result.scoring_eligible is True
-    assert db.commit_count == 2
+    assert db.commit_count == 1
+
+
+def test_record_gps_duplicate_still_resolves_cafe(monkeypatch) -> None:
+    monkeypatch.setattr(tracking_service, "pg_insert", lambda _model: _FakeInsert())
+
+    cafe = _cafe()
+
+    async def fake_resolve_nearest_cafe(_db, _lat, _lng):
+        return cafe
+
+    monkeypatch.setattr(
+        tracking_service, "resolve_nearest_cafe", fake_resolve_nearest_cafe
+    )
+
+    session_id = uuid.uuid4()
+    timestamp = datetime.now(timezone.utc)
+    request = TrackingRequest(
+        device_id="device-001",
+        session_id=str(session_id),
+        lat=21.0,
+        lng=105.0,
+        accuracy=10.0,
+        timestamp=timestamp,
+    )
+    session = _session(session_id)
+    db = _FakeDb(
+        [
+            _FakeResult(scalar=session),
+            _FakeResult(row=None),
+            _FakeResult(row=(456,)),
+        ]
+    )
+
+    result = asyncio.run(tracking_service.record_gps(db, request))
+
+    assert result.log_id == 456
+    assert session.cafe_id == cafe.cafe_id
+    assert result.current_cafe.name == cafe.name
+    assert result.scoring_eligible is True
+    assert db.commit_count == 1
 
 
 def test_record_gps_returns_not_scoring_eligible_without_cafe(monkeypatch) -> None:

@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     # Cafe
     CAFE_RADIUS_DEFAULT_METERS: int = 50
-    NEARBY_CAFES_DEFAULT_LIMIT: int = 5
+    NEARBY_CAFES_DEFAULT_LIMIT: int = 20
 
     # Google Places (optional)
     GOOGLE_PLACES_API_KEY: str = ""

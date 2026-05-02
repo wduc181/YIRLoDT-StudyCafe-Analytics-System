@@ -8,7 +8,7 @@
  * Ref: docs/api_design.md mục 5.
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 /**
  * Helper — gọi fetch + parse JSON + xử lý error chuẩn.
