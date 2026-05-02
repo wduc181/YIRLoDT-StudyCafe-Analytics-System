@@ -61,7 +61,7 @@ Tắt hệ thống:
 
 ## 6. Tài liệu tham khảo (Documentation)
 Mọi quyết định luồng ứng dụng và thuật toán phân tích đều được ghi chép rõ ràng trong thư mục docs/:
-- docs/RequirementAnalysis.md: Yêu cầu chức năng tổng quan.
+- docs/requirement_analysis.md: Yêu cầu chức năng tổng quan.
 - docs/scoring_engine_design.md: Chi tiết công thức tính toán và AI pipeline.
 - docs/api_design.md: Cấu trúc database và thiết kế API RESTful.
 - docs/ui_flow.md: Sơ đồ tương tác luồng màn hình UI.

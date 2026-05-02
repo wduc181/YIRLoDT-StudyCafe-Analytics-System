@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.dependencies import get_db
 from app.schemas.cafe import CafeResponse
 from app.services import cafe_service
@@ -18,7 +19,7 @@ async def get_cafes(
     lat: float | None = None,
     lng: float | None = None,
     radius: str | None = None,
-    limit: int = Query(default=20, ge=1, le=50),
+    limit: int = Query(default=settings.NEARBY_CAFES_DEFAULT_LIMIT, ge=1, le=50),
     db: AsyncSession = Depends(get_db),
 ):
     """Lấy danh sách quán cafe + điểm đánh giá, có thể kèm khoảng cách GPS."""

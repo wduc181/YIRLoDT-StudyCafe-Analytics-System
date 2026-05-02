@@ -6,6 +6,7 @@ Mọi DB operation dùng async/await.
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.internal.haversine import haversine_distance
 from app.models.cafe import Cafe
 from app.models.cafe_score import CafeScore
@@ -41,7 +42,7 @@ async def get_all_cafes(
     lat: float | None = None,
     lng: float | None = None,
     radius: int | None = None,
-    limit: int = 20,
+    limit: int = settings.NEARBY_CAFES_DEFAULT_LIMIT,
 ) -> list[CafeResponse]:
     """Lấy danh sách quán active, hỗ trợ khoảng cách/sort/filter khi có GPS."""
     stmt = select(Cafe).where(Cafe.status == "active")
