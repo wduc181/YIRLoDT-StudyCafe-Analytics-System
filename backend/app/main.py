@@ -8,10 +8,11 @@ import logging
 import logging.config
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
 from app.db.database import init_db, close_db
@@ -107,8 +108,8 @@ def _validation_error_message(request: Request, exc: RequestValidationError) -> 
     return "invalid request"
 
 
-@app.exception_handler(HTTPException)
-async def http_exception_handler(_request: Request, exc: HTTPException):
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(_request: Request, exc: StarletteHTTPException):
     """Preserve status code while returning top-level status/message errors."""
     detail = exc.detail
     if isinstance(detail, dict):

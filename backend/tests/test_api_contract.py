@@ -78,6 +78,36 @@ def test_tracking_invalid_uuid_returns_contract_422() -> None:
     }
 
 
+def test_route_not_found_returns_contract_404() -> None:
+    client = _client()
+    try:
+        response = client.get("/no-such-route")
+    finally:
+        client.close()
+        _clear_overrides()
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "status": "error",
+        "message": "Not Found",
+    }
+
+
+def test_method_not_allowed_returns_contract_405() -> None:
+    client = _client()
+    try:
+        response = client.post("/")
+    finally:
+        client.close()
+        _clear_overrides()
+
+    assert response.status_code == 405
+    assert response.json() == {
+        "status": "error",
+        "message": "Method Not Allowed",
+    }
+
+
 def test_http_exception_handler_preserves_status_and_unwraps_detail(monkeypatch) -> None:
     async def fake_end_session(_db, _request, _background_tasks):
         raise HTTPException(
