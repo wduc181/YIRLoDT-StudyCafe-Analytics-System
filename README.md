@@ -50,6 +50,11 @@ Sau khi build xong, truy cập vào ứng dụng tại:
 - Frontend (Giao diện người dùng): http://localhost:5173
 - Backend API (Swagger UI): http://localhost:8088/docs
 
+Khi chạy frontend local không qua Docker và không cấu hình `.env`, frontend
+mặc định gọi backend tại `http://localhost:8000`. Với Docker Compose,
+`VITE_API_BASE_URL` được set sẵn thành `http://localhost:8088` để khớp port
+public của backend container.
+
 Tắt hệ thống:
 - Khi muốn dừng toàn bộ các tiến trình:
   `docker compose down`

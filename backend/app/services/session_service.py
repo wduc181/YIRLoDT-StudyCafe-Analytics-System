@@ -6,6 +6,7 @@ Mọi DB operation dùng async/await.
 import uuid
 import logging
 from datetime import datetime, timezone
+from uuid import UUID
 
 from fastapi import BackgroundTasks, HTTPException
 from sqlalchemy import select, func
@@ -113,10 +114,10 @@ async def end_session(
     )
 
 
-async def get_session(db: AsyncSession, session_id: str) -> SessionResponse:
+async def get_session(db: AsyncSession, session_id: UUID) -> SessionResponse:
     """Lấy chi tiết session + gps_log_count."""
     stmt = select(Session).where(
-        Session.session_id == uuid.UUID(session_id)
+        Session.session_id == session_id
     )
     result = await db.execute(stmt)
     session = result.scalar_one_or_none()

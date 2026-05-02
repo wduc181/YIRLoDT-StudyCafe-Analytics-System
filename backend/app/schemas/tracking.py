@@ -3,6 +3,7 @@ tracking.py — Pydantic Schemas cho GPS Tracking domain.
 """
 
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import BaseModel, field_validator
 
@@ -10,7 +11,7 @@ from pydantic import BaseModel, field_validator
 class TrackingRequest(BaseModel):
     """Request body cho POST /api/tracking."""
     device_id: str
-    session_id: str
+    session_id: UUID
     lat: float
     lng: float
     accuracy: float | None = None

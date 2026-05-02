@@ -25,12 +25,20 @@ class _FakeCafeResult:
         return _FakeScalarResult(self._cafes)
 
 
-class _FakeScoreResult:
-    def __init__(self, score):
-        self._score = score
+class _FakeScoreScalars:
+    def __init__(self, scores):
+        self._scores = scores
 
-    def scalar_one_or_none(self):
-        return self._score
+    def all(self):
+        return self._scores
+
+
+class _FakeScoreResult:
+    def __init__(self, scores):
+        self._scores = scores
+
+    def scalars(self):
+        return _FakeScoreScalars(self._scores)
 
 
 class _FakeDb:
@@ -44,7 +52,7 @@ class _FakeDb:
         if self._execute_count == 1:
             return _FakeCafeResult(self._cafes)
 
-        return _FakeScoreResult(self._scores.pop(0))
+        return _FakeScoreResult(self._scores)
 
 
 def _cafe(cafe_id, name, lat, lng):

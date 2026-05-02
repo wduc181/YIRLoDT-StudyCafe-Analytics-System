@@ -4,8 +4,6 @@ tracking_service.py — Business Logic: GPS Tracking.
 Chống duplicate bằng ON CONFLICT (session_id, timestamp) DO NOTHING.
 """
 
-import uuid
-
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -21,7 +19,7 @@ from app.schemas.tracking import TrackingCafe, TrackingRequest, TrackingResponse
 async def record_gps(db: AsyncSession, data: TrackingRequest) -> TrackingResponse:
     """Lưu GPS log vào DB với duplicate prevention."""
     # Validate session_id tồn tại và đang active
-    session_uuid = uuid.UUID(data.session_id)
+    session_uuid = data.session_id
     stmt = select(Session).where(Session.session_id == session_uuid)
     result = await db.execute(stmt)
     session = result.scalar_one_or_none()
@@ -48,8 +46,6 @@ async def record_gps(db: AsyncSession, data: TrackingRequest) -> TrackingRespons
     insert_stmt = insert_stmt.returning(GpsLog.log_id)
 
     result = await db.execute(insert_stmt)
-    await db.commit()
-
     row = result.fetchone()
     if row is None:
         # Duplicate — log đã tồn tại, trả lại log_id hiện có
@@ -70,12 +66,13 @@ async def record_gps(db: AsyncSession, data: TrackingRequest) -> TrackingRespons
         nearest_cafe = await resolve_nearest_cafe(db, data.lat, data.lng)
         if nearest_cafe is not None:
             session.cafe_id = nearest_cafe.cafe_id
-            await db.commit()
             current_cafe = nearest_cafe
     else:
         cafe_stmt = select(Cafe).where(Cafe.cafe_id == session.cafe_id)
         cafe_result = await db.execute(cafe_stmt)
         current_cafe = cafe_result.scalar_one_or_none()
+
+    await db.commit()
 
     return TrackingResponse(
         status="ok",
