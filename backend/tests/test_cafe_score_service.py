@@ -1,22 +1,30 @@
 """
-test_cafe_score_service.py — Integration Tests: get_latest_scores_by_cafe_id.
+test_cafe_score_service.py — Tests for get_latest_scores_by_cafe_id.
 
-Tests cần DB thật (hoặc test DB) vì query dùng window function + aliased subquery
-mà unit test với mock db.execute không cover được runtime mapping.
+File này có unit tests dùng mock DB cho edge cases cơ bản và một SQLite-backed
+query test để thực thi SQLAlchemy window function + aliased subquery thật.
 
 Run: pytest backend/tests/test_cafe_score_service.py -v
 """
 
 import asyncio
-import pytest
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session as SyncSession
+
+from app.models.cafe import Cafe
 from app.models.cafe_score import CafeScore
 from app.services.cafe_score_service import get_latest_scores_by_cafe_id
 
 
-# ── Unit tests cho edge cases cơ bản ──────────────────────
+class _AsyncDbWrapper:
+    def __init__(self, session):
+        self.session = session
+
+    async def execute(self, stmt):
+        return self.session.execute(stmt)
 
 
 def test_empty_cafe_ids_returns_empty_dict():
@@ -74,3 +82,81 @@ def test_cafe_without_score_not_in_result():
 
     assert 1 in result
     assert 3 not in result
+
+
+def test_query_returns_latest_score_per_cafe_with_tie_breaker():
+    """
+    Execute the real SQLAlchemy query against SQLite.
+
+    Cafe 1: latest by computed_at.
+    Cafe 2: same computed_at, latest by higher score_id.
+    Cafe 3: no score, absent from result.
+    """
+    engine = create_engine("sqlite:///:memory:")
+    Cafe.__table__.create(engine)
+    CafeScore.__table__.create(engine)
+
+    computed_at = datetime(2026, 5, 1, 9, 0, tzinfo=timezone.utc)
+    with SyncSession(engine) as session:
+        session.add_all(
+            [
+                Cafe(
+                    cafe_id=1,
+                    name="Cafe A",
+                    center_lat=21.0,
+                    center_lng=105.0,
+                    status="active",
+                ),
+                Cafe(
+                    cafe_id=2,
+                    name="Cafe B",
+                    center_lat=21.1,
+                    center_lng=105.1,
+                    status="active",
+                ),
+                Cafe(
+                    cafe_id=3,
+                    name="Cafe C",
+                    center_lat=21.2,
+                    center_lng=105.2,
+                    status="active",
+                ),
+            ]
+        )
+        session.add_all(
+            [
+                CafeScore(
+                    cafe_id=1,
+                    computed_at=computed_at - timedelta(days=1),
+                    behavior_score=5.0,
+                    has_enough_data=True,
+                ),
+                CafeScore(
+                    cafe_id=1,
+                    computed_at=computed_at,
+                    behavior_score=8.0,
+                    has_enough_data=True,
+                ),
+                CafeScore(
+                    cafe_id=2,
+                    computed_at=computed_at,
+                    behavior_score=6.0,
+                    has_enough_data=True,
+                ),
+                CafeScore(
+                    cafe_id=2,
+                    computed_at=computed_at,
+                    behavior_score=7.0,
+                    has_enough_data=True,
+                ),
+            ]
+        )
+        session.commit()
+
+        result = asyncio.run(
+            get_latest_scores_by_cafe_id(_AsyncDbWrapper(session), [1, 2, 3])
+        )
+
+        assert set(result) == {1, 2}
+        assert result[1].behavior_score == 8.0
+        assert result[2].behavior_score == 7.0

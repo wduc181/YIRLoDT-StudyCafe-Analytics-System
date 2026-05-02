@@ -5,7 +5,6 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
 from pydantic import ValidationError
 
 from app.models.session import Session
@@ -63,22 +62,24 @@ def test_session_end_request_rejects_invalid_uuid() -> None:
 		SessionEndRequest(session_id="invalid-uuid")
 
 
-def test_end_session_rejects_completed_session_without_scoring() -> None:
+def test_end_session_returns_existing_completed_session_and_retriggers_scoring() -> None:
 	session = _session(status="completed")
+	session.end_time = datetime.now(timezone.utc)
+	session.duration_min = 30.0
 	db = _FakeDb(session)
 	background_tasks = _FakeBackgroundTasks()
 	request = SessionEndRequest(session_id=session.session_id)
 
-	with pytest.raises(HTTPException) as exc_info:
-		asyncio.run(session_service.end_session(db, request, background_tasks))
+	result = asyncio.run(session_service.end_session(db, request, background_tasks))
 
-	assert exc_info.value.status_code == 409
-	assert exc_info.value.detail == {
-		"status": "error",
-		"message": "session already ended",
-	}
+	assert result.status == "ok"
+	assert result.session_id == str(session.session_id)
+	assert result.ended_at == session.end_time
+	assert result.duration_min == session.duration_min
 	assert db.commit_count == 0
-	assert background_tasks.tasks == []
+	assert len(background_tasks.tasks) == 1
+	assert background_tasks.tasks[0][0] is session_service._run_scoring_background
+	assert background_tasks.tasks[0][1] == (str(session.session_id),)
 
 
 def test_end_session_marks_active_session_completed_and_triggers_scoring() -> None:
