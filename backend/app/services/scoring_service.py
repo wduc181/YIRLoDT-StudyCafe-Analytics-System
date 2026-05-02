@@ -10,6 +10,7 @@ from uuid import UUID
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.models.session import Session
 from app.models.gps_log import GpsLog
@@ -304,7 +305,7 @@ async def score_and_update_cafe(db: AsyncSession, session_id: str) -> dict:
 
     # 3. Gọi scoring engine (function call — embedded module)
     try:
-        session_result = engine_score_session(payload)
+        session_result = await run_in_threadpool(engine_score_session, payload)
         logger.info(
             "Session %s scored: is_studying=%s",
             session_id,
@@ -323,7 +324,8 @@ async def score_and_update_cafe(db: AsyncSession, session_id: str) -> dict:
         cafe_result = None
 
         if cafe_history:
-            cafe_result = engine_update_cafe_score(
+            cafe_result = await run_in_threadpool(
+                engine_update_cafe_score,
                 cafe_id=payload["cafe"]["cafe_id"],
                 session_result=session_result,
                 cafe_history=cafe_history,

@@ -21,7 +21,7 @@ async def get_latest_scores_by_cafe_id(
             func.row_number()
             .over(
                 partition_by=CafeScore.cafe_id,
-                order_by=CafeScore.computed_at.desc(),
+                order_by=(CafeScore.computed_at.desc(), CafeScore.score_id.desc()),
             )
             .label("score_rank"),
         )

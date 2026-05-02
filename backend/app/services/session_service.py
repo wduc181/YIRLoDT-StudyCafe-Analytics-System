@@ -89,9 +89,14 @@ async def end_session(
         )
 
     if session.status == "completed":
-        raise HTTPException(
-            status_code=409,
-            detail={"status": "error", "message": "session already ended"},
+        # Idempotent: session đã kết thúc trước đó → trả lại kết quả hiện có.
+        # Re-trigger scoring background để recovery nếu task lần đầu chưa chạy.
+        background_tasks.add_task(_run_scoring_background, str(data.session_id))
+        return SessionEndResponse(
+            status="ok",
+            session_id=str(session.session_id),
+            ended_at=session.end_time,
+            duration_min=session.duration_min,
         )
 
     now = datetime.now(timezone.utc)

@@ -30,6 +30,12 @@ async def record_gps(db: AsyncSession, data: TrackingRequest) -> TrackingRespons
             detail={"status": "error", "message": "session not found"},
         )
 
+    if session.status != "active":
+        raise HTTPException(
+            status_code=409,
+            detail={"status": "error", "message": "session already ended"},
+        )
+
     # Insert GPS log với ON CONFLICT DO NOTHING
     insert_stmt = pg_insert(GpsLog).values(
         session_id=session_uuid,
