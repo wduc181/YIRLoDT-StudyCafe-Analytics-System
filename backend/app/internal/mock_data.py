@@ -41,6 +41,14 @@ async def import_mock_data(db: AsyncSession) -> dict:
            Cafe(name="Test Location - Session Exact Match",
                address="Hanoi Session Match Point",
                center_lat=21.5941, center_lng=105.8432, radius_meters=30, status="active"),
+        Cafe(
+            name="Trạm Lab Tại Gia - Nhà Long",
+            address="Nhà của tôi", 
+            center_lat=21.099249724040376,
+            center_lng=105.28313606165418,
+            radius_meters=100,
+            status="active"
+        ),
     ]
     db.add_all(mock_cafes)
     await db.flush()
