@@ -83,7 +83,7 @@ export async function sendGpsLog(data) {
 // ─── Cafes ───────────────────────────────────────
 
 /** GET /api/cafes */
-export async function getCafes({ lat, lng, radius, limit } = {}) {
+export async function getCafes({ lat, lng, radius, minRadius, page, limit } = {}) {
   const params = new URLSearchParams();
 
   if (lat != null && lng != null) {
@@ -91,6 +91,8 @@ export async function getCafes({ lat, lng, radius, limit } = {}) {
     params.set("lng", String(lng));
   }
   if (radius != null) params.set("radius", String(radius));
+  if (minRadius != null) params.set("min_radius", String(minRadius));
+  if (page != null) params.set("page", String(page));
   if (limit != null) params.set("limit", String(limit));
 
   const query = params.toString();

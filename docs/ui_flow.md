@@ -1,8 +1,8 @@
 # UI Flow Document
 ## StudyCafe Analytics System
 
-**Phiên bản:** v1.1
-**Ngày cập nhật:** 30/04/2026
+**Phiên bản:** v1.2
+**Ngày cập nhật:** 05/05/2026
 
 ---
 
@@ -187,7 +187,8 @@ kèm điểm đánh giá hành vi và link Google Maps.
 
 #### Thành phần chính
 - Danh sách quán sort theo khoảng cách tăng dần
-- Bộ lọc giới hạn khoảng cách: 5km, 10km, không giới hạn
+- Bộ lọc giới hạn khoảng cách: 5km, 5-15km, không giới hạn
+- Điều khiển phân trang để không render toàn bộ danh sách cùng lúc
 - Mỗi item gồm:
   - Tên quán
   - Địa chỉ ngắn
@@ -201,7 +202,7 @@ kèm điểm đánh giá hành vi và link Google Maps.
 ```
 ┌─────────────────────────────┐
 │  Quán gần bạn nhất          │
-│  [ 5km ] [ 10km ] [ Tất cả ]│
+│ [ 5km ] [5-15km] [Tất cả] │
 │                             │
 │  Cafe A              230m   │
 │  123 Phố X                  │
@@ -218,6 +219,8 @@ kèm điểm đánh giá hành vi và link Google Maps.
 │  Score: 6.1 ★               │
 │  [ Mở Maps ]                │
 │                             │
+│  [ Trước ] Trang 1/5 [ Sau ]│
+│                             │
 │  [ + Đề xuất quán mới ]     │
 │  [ Về trang chủ ]           │
 └─────────────────────────────┘
@@ -225,13 +228,15 @@ kèm điểm đánh giá hành vi và link Google Maps.
 
 #### Hành vi
 - Khi vào màn này, frontend lấy GPS hiện tại và gọi
-  `GET /api/cafes?lat=...&lng=...&radius=5000`
+  `GET /api/cafes?lat=...&lng=...&radius=5000&page=1&limit=10`
 - Filter mặc định là 5km.
 - Các option filter phải được khai báo trong `frontend/src/constants/index.js`
   (ví dụ `DISTANCE_FILTER_OPTIONS`), không hardcode trong screen/hook.
-- Khi user chọn 10km, frontend gọi lại `GET /api/cafes?lat=...&lng=...&radius=10000`.
-- Khi user chọn "Không giới hạn", frontend gọi lại `GET /api/cafes?lat=...&lng=...` và không gửi `radius`.
+- Khi user chọn 5-15km, frontend gọi lại `GET /api/cafes?lat=...&lng=...&min_radius=5000&radius=15000&page=1&limit=10`.
+- Khi user chọn "Không giới hạn", frontend gọi lại `GET /api/cafes?lat=...&lng=...&page=1&limit=10` và không gửi `radius`.
 - Danh sách luôn hiển thị theo thứ tự gần đến xa dựa trên response backend.
+- Frontend hiển thị `items` của trang hiện tại và dùng `has_next`, `has_previous`,
+  `total_pages` để bật/tắt nút phân trang.
 - Hiển thị khoảng cách dạng "230m" nếu < 1000m, "1.2km" nếu >= 1000m.
 - Nút "Mở Maps" mở Google Maps URL trong tab mới.
 - Nếu GPS không sẵn sàng → fallback về list tĩnh `GET /api/cafes`
@@ -405,6 +410,10 @@ thông qua Google Places Autocomplete.
 - Phát hành phiên bản chính thức 1.0
 
 ### v1.1
-- Bổ sung filter khoảng cách cho S4: 5km, 10km, không giới hạn.
+- Bổ sung filter khoảng cách cho S4.
 - Chốt S4 dùng `/api/cafes` với query GPS để nhận `distance_meters` và danh sách sort gần đến xa.
 - Chốt các mốc filter S4 nằm trong config frontend chung.
+
+### v1.2
+- Cập nhật filter S4 thành 5km, 5-15km, không giới hạn.
+- Bổ sung phân trang cho danh sách quán gần bạn nhất.
