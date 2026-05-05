@@ -1,8 +1,8 @@
 # API Design Document
 ## StudyCafe Analytics System
 
-**Phiên bản:** v1.1
-**Ngày cập nhật:** 30/04/2026
+**Phiên bản:** v1.2
+**Ngày cập nhật:** 05/05/2026
 
 ---
 
@@ -201,21 +201,25 @@ khoảng cách tăng dần và hỗ trợ filter theo bán kính.
 - `radius` (integer, optional): Bán kính tìm kiếm (mét), chỉ có hiệu lực khi có đủ `lat` và `lng`.
   - Chấp nhận mọi số nguyên dương.
   - Không gửi param: không giới hạn khoảng cách.
+- `min_radius` (integer, optional): Ngưỡng khoảng cách tối thiểu (mét), chỉ có hiệu lực khi có đủ `lat` và `lng`.
+  - Dùng cho filter dạng khoảng, ví dụ 5-15km.
 - `limit` (integer, optional): Số quán trả về, mặc định 20, tối đa 50.
+- `page` (integer, optional): Trang danh sách, mặc định 1.
 
 #### Logic xử lý
 1. Nếu không có `lat` và `lng`, trả danh sách quán active như hiện tại.
 2. Nếu có đủ `lat` và `lng`, tính khoảng cách Haversine từ user đến từng quán active.
 3. Nếu có `radius`, chỉ giữ quán có `distance_meters <= radius`.
-4. Sort theo khoảng cách tăng dần.
-5. Trả về top N theo `limit`.
+4. Nếu có `min_radius`, chỉ giữ quán có `distance_meters > min_radius`.
+5. Sort theo khoảng cách tăng dần.
+6. Phân trang sau khi filter/sort theo `page` và `limit`.
 
 #### Quy ước filter frontend
 
 | UI filter | Query gửi lên backend |
 |---|---|
 | 5km | `/api/cafes?lat=...&lng=...&radius=5000` |
-| 10km | `/api/cafes?lat=...&lng=...&radius=10000` |
+| 5-15km | `/api/cafes?lat=...&lng=...&min_radius=5000&radius=15000` |
 | Không giới hạn | `/api/cafes?lat=...&lng=...` |
 
 Các mốc filter hiển thị trên frontend phải khai báo tập trung trong
@@ -236,20 +240,28 @@ f"https://www.google.com/maps/dir/?api=1&destination={cafe.center_lat},{cafe.cen
 không có `lat`/`lng`, `distance_meters` không được trả về hoặc có giá trị `null`.
 
 ```json
-[
-  {
-    "cafe_id": 1,
-    "name": "Cafe A",
-    "address": "123 Pho X",
-    "center_lat": 21.0285,
-    "center_lng": 105.8542,
-    "radius_meters": 50,
-    "behavior_score": 8.3,
-    "has_enough_data": true,
-    "distance_meters": 230,
-    "google_maps_url": "https://www.google.com/maps?q=21.0285,105.8542"
-  }
-]
+{
+  "items": [
+    {
+      "cafe_id": 1,
+      "name": "Cafe A",
+      "address": "123 Pho X",
+      "center_lat": 21.0285,
+      "center_lng": 105.8542,
+      "radius_meters": 50,
+      "behavior_score": 8.3,
+      "has_enough_data": true,
+      "distance_meters": 230,
+      "google_maps_url": "https://www.google.com/maps?q=21.0285,105.8542"
+    }
+  ],
+  "page": 1,
+  "limit": 10,
+  "total": 42,
+  "total_pages": 5,
+  "has_next": true,
+  "has_previous": false
+}
 ```
 
 #### Response 400
@@ -262,8 +274,8 @@ không có `lat`/`lng`, `distance_meters` không được trả về hoặc có 
 { "status": "error", "message": "invalid radius" }
 ```
 
-Trả về khi `radius` có giá trị nhỏ hơn hoặc bằng 0, hoặc không parse được thành
-số nguyên hợp lệ.
+Trả về khi `radius` hoặc `min_radius` nhỏ hơn hoặc bằng 0, không parse được
+thành số nguyên hợp lệ, hoặc khi `min_radius >= radius`.
 
 ---
 
@@ -638,4 +650,9 @@ CREATE TABLE cafe_scores (
 ### v1.1
 - Chốt `GET /api/cafes` là endpoint duy nhất cho danh sách quán.
 - Bổ sung query `lat`, `lng`, `radius`, `limit` để trả `distance_meters`, sort gần đến xa và filter theo bán kính dương bất kỳ.
-- Chốt frontend chỉ expose các mốc 5km/10km/không giới hạn qua config chung, còn backend chấp nhận mọi `radius > 0`.
+- Chốt frontend chỉ expose các mốc filter khoảng cách qua config chung, còn backend chấp nhận mọi `radius > 0`.
+
+### v1.2
+- Bổ sung phân trang cho `GET /api/cafes` với `page`, `limit` và metadata `total`, `total_pages`, `has_next`, `has_previous`.
+- Bổ sung `min_radius` để hỗ trợ filter 5-15km.
+- Cập nhật mốc filter frontend thành 5km/5-15km/không giới hạn.

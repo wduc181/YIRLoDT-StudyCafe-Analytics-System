@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.internal.haversine import haversine_distance
 from app.models.cafe import Cafe
 from app.models.cafe_score import CafeScore
-from app.schemas.cafe import CafeResponse
+from app.schemas.cafe import CafeListResponse, CafeResponse
 from app.services.cafe_score_service import get_latest_scores_by_cafe_id
 
 
@@ -42,8 +42,10 @@ async def get_all_cafes(
     lat: float | None = None,
     lng: float | None = None,
     radius: int | None = None,
+    min_radius: int | None = None,
+    page: int = 1,
     limit: int = settings.NEARBY_CAFES_DEFAULT_LIMIT,
-) -> list[CafeResponse]:
+) -> CafeListResponse:
     """Lấy danh sách quán active, hỗ trợ khoảng cách/sort/filter khi có GPS."""
     stmt = select(Cafe).where(Cafe.status == "active")
     result = await db.execute(stmt)
@@ -67,6 +69,8 @@ async def get_all_cafes(
             )
             if radius is not None and distance_meters > radius:
                 continue
+            if min_radius is not None and distance_meters <= min_radius:
+                continue
 
         response.append(_build_cafe_response(cafe, score, distance_meters))
 
@@ -77,4 +81,17 @@ async def get_all_cafes(
             else float("inf")
         )
 
-    return response[:limit]
+    total = len(response)
+    total_pages = (total + limit - 1) // limit if total > 0 else 0
+    start = (page - 1) * limit
+    items = response[start : start + limit]
+
+    return CafeListResponse(
+        items=items,
+        page=page,
+        limit=limit,
+        total=total,
+        total_pages=total_pages,
+        has_next=page < total_pages,
+        has_previous=page > 1 and total_pages > 0,
+    )

@@ -10,12 +10,14 @@ import { useCallback, useEffect, useState } from "react";
 import CafeCard from "../components/CafeCard";
 import SkeletonLoader from "../components/SkeletonLoader";
 import {
+  CAFE_LIST_PAGE_SIZE,
   DEFAULT_DISTANCE_FILTER,
   DISTANCE_FILTER_OPTIONS,
 } from "../constants";
 
 export default function CafeListScreen({
   cafes,
+  pagination,
   loading,
   error,
   onFetchCafes,
@@ -27,9 +29,16 @@ export default function CafeListScreen({
   onGoToSuggest,
 }) {
   const [selectedFilter, setSelectedFilter] = useState(DEFAULT_DISTANCE_FILTER);
+  const [page, setPage] = useState(1);
   const [hasLocation, setHasLocation] = useState(false);
   const [resolvingLocation, setResolvingLocation] = useState(false);
   const isLoading = loading || resolvingLocation;
+  const totalPages = pagination?.totalPages ?? 0;
+  const pageLabel = totalPages > 0
+    ? `Trang ${pagination?.page ?? page} / ${totalPages}`
+    : "Trang 0";
+  const canGoPrevious = Boolean(pagination?.hasPrevious) && !isLoading;
+  const canGoNext = Boolean(pagination?.hasNext) && !isLoading;
 
   const loadCafes = useCallback(async () => {
     const filter = DISTANCE_FILTER_OPTIONS.find(
@@ -41,13 +50,24 @@ export default function CafeListScreen({
 
     if (!position) {
       setHasLocation(false);
-      await onFetchCafes();
+      await onFetchCafes({ page, limit: CAFE_LIST_PAGE_SIZE });
       return;
     }
 
     setHasLocation(true);
-    await onFetchCafes({ position, radius: filter?.radius ?? null });
-  }, [onFetchCafes, onGetCurrentPosition, selectedFilter]);
+    await onFetchCafes({
+      position,
+      radius: filter?.radius ?? null,
+      minRadius: filter?.minRadius ?? null,
+      page,
+      limit: CAFE_LIST_PAGE_SIZE,
+    });
+  }, [onFetchCafes, onGetCurrentPosition, page, selectedFilter]);
+
+  const handleFilterChange = (nextFilter) => {
+    setSelectedFilter(nextFilter);
+    setPage(1);
+  };
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -86,7 +106,7 @@ export default function CafeListScreen({
               <button
                 key={option.value}
                 type="button"
-                onClick={() => setSelectedFilter(option.value)}
+                onClick={() => handleFilterChange(option.value)}
                 disabled={isLoading}
                 className={`h-10 rounded-lg text-sm font-medium border transition-all
                   disabled:opacity-60 disabled:cursor-not-allowed
@@ -140,6 +160,34 @@ export default function CafeListScreen({
           )
         )}
       </div>
+
+      {pagination && (
+        <div className="flex items-center justify-between gap-3 mt-4">
+          <button
+            type="button"
+            onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
+            disabled={!canGoPrevious}
+            className="h-10 px-4 rounded-lg text-sm font-medium border
+              bg-surface border-slate-700 text-slate-300 hover:border-slate-500
+              disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            Trước
+          </button>
+          <span className="text-sm text-slate-400">
+            {pageLabel}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((currentPage) => currentPage + 1)}
+            disabled={!canGoNext}
+            className="h-10 px-4 rounded-lg text-sm font-medium border
+              bg-surface border-slate-700 text-slate-300 hover:border-slate-500
+              disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            Sau
+          </button>
+        </div>
+      )}
 
       {/* Nút đề xuất quán mới [Optional] */}
       <button

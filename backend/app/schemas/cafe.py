@@ -26,6 +26,17 @@ class CafeNearbyResponse(CafeResponse):
     distance_meters: float
 
 
+class CafeListResponse(BaseModel):
+    """Paginated response schema cho GET /api/cafes."""
+    items: list[CafeResponse]
+    page: int
+    limit: int
+    total: int
+    total_pages: int
+    has_next: bool
+    has_previous: bool
+
+
 class CafeCreate(BaseModel):
     """Request schema cho POST /api/cafes/suggest [Optional]."""
     device_id: str

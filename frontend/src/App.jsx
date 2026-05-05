@@ -126,6 +126,7 @@ function App() {
         return (
           <CafeListScreen
             cafes={cafes.cafes}
+            pagination={cafes.pagination}
             loading={cafes.loading}
             error={cafes.error}
             onFetchCafes={cafes.fetchCafes}
