@@ -76,6 +76,10 @@ out/
 .env.production.local
 env.prod
 *.local
+studycafe_deploy_key
+studycafe_deploy_key.pub
+studycafe_actions_key
+studycafe_actions_key.pub
 
 # ========================================
 # Docker
