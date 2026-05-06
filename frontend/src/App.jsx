@@ -13,6 +13,7 @@ import useGps from "./hooks/useGps";
 import useSession from "./hooks/useSession";
 import useCafes from "./hooks/useCafes";
 import useReportExport from "./hooks/useReportExport";
+import useWakeLock from "./hooks/useWakeLock";
 
 import HomeScreen from "./screens/HomeScreen";
 import SessionActiveScreen from "./screens/SessionActiveScreen";
@@ -34,6 +35,9 @@ function App() {
   const session = useSession();
   const cafes = useCafes();
   const reportExport = useReportExport();
+  const wakeLock = useWakeLock({
+    enabled: currentScreen === SCREENS.SESSION_ACTIVE,
+  });
 
   // ─── Navigation Handlers (ui_flow.md mục 6) ────────────
 
@@ -107,6 +111,8 @@ function App() {
             gpsError={gps.error}
             currentCafe={gps.currentCafe}
             scoringEligible={gps.scoringEligible}
+            wakeLockSupported={wakeLock.supported}
+            wakeLockActive={wakeLock.active}
             onEndSession={handleEndSession}
             loading={session.loading}
           />

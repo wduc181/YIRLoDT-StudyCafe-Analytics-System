@@ -15,9 +15,17 @@ export default function SessionActiveScreen({
   gpsError,
   currentCafe,
   scoringEligible,
+  wakeLockSupported,
+  wakeLockActive,
   onEndSession,
   loading,
 }) {
+  const wakeLockMessage = !wakeLockSupported
+    ? "Trình duyệt này không hỗ trợ giữ màn hình sáng. Hãy giữ app mở trong lúc học."
+    : wakeLockActive
+      ? "Ứng dụng đang cố gắng giữ màn hình sáng trong phiên học."
+      : "Hãy giữ màn hình sáng để tracking không bị ngắt.";
+
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 animate-fade-in">
       {/* Tiêu đề */}
@@ -69,7 +77,7 @@ export default function SessionActiveScreen({
 
       {/* Gợi ý giữ app mở */}
       <p className="text-slate-500 text-xs text-center mb-8 px-4 leading-relaxed">
-        Giữ màn hình sáng để tracking không bị ngắt.
+        {wakeLockMessage}
         <br />
         GPS gửi tự động mỗi 60 giây.
       </p>
