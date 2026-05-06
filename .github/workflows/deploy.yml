@@ -13,7 +13,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    environment:
+      name: production
+      url: https://studycafe.centralindia.cloudapp.azure.com/
     steps:
       - name: Setup SSH
         run: |
