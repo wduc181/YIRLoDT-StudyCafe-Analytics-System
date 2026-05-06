@@ -5,6 +5,8 @@ Ref: docs/api_design.md mục 5.7.
 """
 
 import uuid
+import math
+import random
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import text
@@ -13,6 +15,29 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.cafe import Cafe
 from app.models.session import Session
 from app.models.gps_log import GpsLog
+
+
+def _random_point_nearby(
+    rng: random.Random,
+    center_lat: float,
+    center_lng: float,
+    radius_meters: int,
+    *,
+    outlier: bool = False,
+) -> tuple[float, float]:
+    """Return a randomized GPS point near a cafe center."""
+    if outlier:
+        distance_m = rng.uniform(radius_meters * 1.1, radius_meters * 1.8)
+    else:
+        typical_drift_m = max(8.0, min(radius_meters * 0.45, 35.0))
+        distance_m = min(abs(rng.gauss(0, typical_drift_m)), radius_meters * 0.9)
+
+    angle = rng.uniform(0, math.tau)
+    lat_offset = (distance_m * math.cos(angle)) / 111_320
+    lng_scale = 111_320 * max(math.cos(math.radians(center_lat)), 0.1)
+    lng_offset = (distance_m * math.sin(angle)) / lng_scale
+
+    return center_lat + lat_offset, center_lng + lng_offset
 
 
 async def import_mock_data(db: AsyncSession) -> dict:
@@ -185,32 +210,43 @@ async def import_mock_data(db: AsyncSession) -> dict:
              address="Khu sinh thái Thăng Long, Đông Sơn, Chương Mỹ, Hà Nội, Việt Nam",
              center_lat=20.896234, center_lng=105.718512, radius_meters=100, status="active"),
 
-        # ===== Test locations (giữ nguyên) =====
-        Cafe(name="Test Location - Your Current GPS",
-             address="Hanoi Test Point",
-             center_lat=21.5945721, center_lng=105.8420725, radius_meters=50, status="active"),
-        Cafe(name="Test Location - Session Exact Match",
-             address="Hanoi Session Match Point",
-             center_lat=21.5941, center_lng=105.8432, radius_meters=50, status="active"),
+        # ===== Test locations =====
+        Cafe(name="PTIT-DemoLocation",
+             address="PTIT Demo Location",
+             center_lat=20.980231247071202, center_lng=105.78704639977859, radius_meters=200, status="active"),
+        Cafe(name="Long's test location",
+             address="Long's test location",
+             center_lat=20.978697795100366, center_lng=105.79626707266853, radius_meters=50, status="active"),
     ]
     db.add_all(mock_cafes)
     await db.flush()
 
     # Mock sessions + GPS logs
+    rng = random.Random()
     total_sessions = 0
     total_logs = 0
     session_ids: list[str] = []
-    base_time = datetime.now(timezone.utc) - timedelta(days=7)
+    base_time = datetime.now(timezone.utc) - timedelta(days=21)
 
     for cafe in mock_cafes:
         cafe_sessions = []
-        for i in range(10):  # 10 sessions per cafe
-            session_start = base_time + timedelta(hours=i * 3)
-            session_duration_min = 30 + (i * 10) % 120  # 30–120 phút
+        sessions_per_cafe = rng.randint(8, 14)
+        for i in range(sessions_per_cafe):
+            day_offset = rng.randint(0, 20)
+            hour_offset = rng.randint(7, 21)
+            minute_offset = rng.randint(0, 59)
+            second_offset = rng.randint(0, 59)
+            session_start = base_time + timedelta(
+                days=day_offset,
+                hours=hour_offset,
+                minutes=minute_offset,
+                seconds=second_offset,
+            )
+            session_duration_min = rng.randint(35, 180)
 
             session = Session(
                 session_id=uuid.uuid4(),
-                device_id=f"mock-device-{i % 5:03d}",
+                device_id=f"mock-device-{rng.randint(0, 11):03d}",
                 cafe_id=cafe.cafe_id,
                 start_time=session_start,
                 end_time=session_start + timedelta(minutes=session_duration_min),
@@ -226,20 +262,29 @@ async def import_mock_data(db: AsyncSession) -> dict:
         await db.flush()
 
         for session, session_start, session_duration_min in cafe_sessions:
-            # GPS logs mỗi 60 giây
-            log_count = session_duration_min  # 1 log / phút
-            for j in range(log_count):
+            timestamp = session_start
+            session_end = session_start + timedelta(minutes=session_duration_min)
+            while timestamp <= session_end:
+                outlier = rng.random() < 0.04
+                lat, lng = _random_point_nearby(
+                    rng,
+                    cafe.center_lat,
+                    cafe.center_lng,
+                    cafe.radius_meters,
+                    outlier=outlier,
+                )
                 gps_log = GpsLog(
                     session_id=session.session_id,
                     device_id=session.device_id,
-                    lat=cafe.center_lat + (j % 3) * 0.00001,  # Nhẹ drift
-                    lng=cafe.center_lng + (j % 5) * 0.00001,
-                    accuracy_m=10.0 + (j % 10),
-                    timestamp=session_start + timedelta(minutes=j),
-                    is_noise=False,
+                    lat=lat,
+                    lng=lng,
+                    accuracy_m=rng.uniform(45.0, 95.0) if outlier else rng.uniform(6.0, 32.0),
+                    timestamp=timestamp,
+                    is_noise=outlier,
                 )
                 db.add(gps_log)
                 total_logs += 1
+                timestamp += timedelta(seconds=rng.randint(45, 90))
 
     await db.commit()
 
