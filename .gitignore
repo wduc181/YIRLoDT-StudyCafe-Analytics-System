@@ -74,7 +74,12 @@ out/
 .env.development.local
 .env.test.local
 .env.production.local
+env.prod
 *.local
+studycafe_deploy_key
+studycafe_deploy_key.pub
+studycafe_actions_key
+studycafe_actions_key.pub
 
 # ========================================
 # Docker
@@ -139,4 +144,3 @@ reports/
 AGENTS.md
 CLAUDE.md
 CODEX.md
-

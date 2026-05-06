@@ -1,0 +1,38 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy to VPS
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" << 'EOF'
+            set -e
+            cd "${{ secrets.VPS_PROJECT_DIR }}"
+            git fetch origin
+            git checkout main
+            git pull --ff-only origin main
+            docker compose --env-file env.prod -f docker-compose.prod.yml up -d --build
+            docker compose --env-file env.prod -f docker-compose.prod.yml ps
+            curl -fsS http://127.0.0.1:8088/ >/dev/null
+            curl -fsS http://127.0.0.1:5173/ >/dev/null
+            docker image prune -f
+          EOF
