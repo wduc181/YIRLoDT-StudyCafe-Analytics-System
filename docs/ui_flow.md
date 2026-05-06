@@ -134,6 +134,10 @@ Cho user biết session đang chạy và hệ thống đang tracking GPS.
 #### Hành vi
 - Đồng hồ tăng theo giây.
 - Frontend gửi GPS định kỳ mỗi 60 giây.
+- Khi vào màn Session Active, frontend sẽ cố gắng bật Screen Wake Lock nếu
+  trình duyệt hỗ trợ để giảm khả năng màn hình tắt trong lúc tracking.
+- Nếu không hỗ trợ hoặc request Wake Lock thất bại, UI hiển thị nhắc nhở user
+  giữ màn hình sáng; session vẫn hoạt động bình thường.
 - Sau mỗi lần gửi GPS, frontend đọc `current_cafe` và `scoring_eligible`
   từ response `POST /api/tracking`.
 - Nếu `current_cafe` có giá trị → hiển thị `Vị trí của bạn: <tên quán>`.
@@ -142,6 +146,8 @@ Cho user biết session đang chạy và hệ thống đang tracking GPS.
   ghi lại, nhưng GPS vẫn tiếp tục được theo dõi."
 - Nếu GPS mất tạm thời → hiển thị cảnh báo nhẹ, không crash UI.
 - Nếu mạng mất → retry GPS request, không dừng session.
+- Wake Lock không đảm bảo tracking nền khi thiết bị khóa màn hình hoặc
+  browser/OS kill tab.
 
 ---
 
