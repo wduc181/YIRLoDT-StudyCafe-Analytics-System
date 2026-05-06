@@ -17,20 +17,65 @@ jobs:
       name: production
       url: https://studycafe.centralindia.cloudapp.azure.com/
     steps:
-      - name: Setup SSH
+      - name: Setup SSH key
+        env:
+          VPS_SSH_KEY_B64: ${{ secrets.VPS_SSH_KEY_B64 }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY_B64 }}" | base64 -d > ~/.ssh/deploy_key
+          chmod 700 ~/.ssh
+
+          if [ -z "$VPS_SSH_KEY_B64" ]; then
+            echo "::error::Missing VPS_SSH_KEY_B64 secret"
+            exit 1
+          fi
+
+          printf '%s' "$VPS_SSH_KEY_B64" | base64 --decode > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
           ssh-keygen -y -f ~/.ssh/deploy_key > ~/.ssh/deploy_key.pub
           ssh-keygen -lf ~/.ssh/deploy_key.pub
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" "hostname && whoami"
 
+      - name: Trust VPS host key
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_PORT: ${{ secrets.VPS_SSH_PORT || '22' }}
+        run: |
+          if [ -z "$VPS_HOST" ]; then
+            echo "::error::Missing VPS_HOST secret"
+            exit 1
+          fi
+
+          ssh-keyscan -T 30 -p "$VPS_SSH_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Verify SSH connection
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_PORT: ${{ secrets.VPS_SSH_PORT || '22' }}
+        run: |
+          if [ -z "$VPS_USER" ]; then
+            echo "::error::Missing VPS_USER secret"
+            exit 1
+          fi
+
+          ssh -i ~/.ssh/deploy_key \
+            -p "$VPS_SSH_PORT" \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "$VPS_USER@$VPS_HOST" "hostname && whoami"
 
       - name: Deploy to VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_PORT: ${{ secrets.VPS_SSH_PORT || '22' }}
         run: |
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" << 'EOF'
+          ssh -i ~/.ssh/deploy_key \
+            -p "$VPS_SSH_PORT" \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "$VPS_USER@$VPS_HOST" << 'EOF'
             set -e
             cd "${{ secrets.VPS_PROJECT_DIR }}"
             git fetch origin
@@ -42,4 +87,3 @@ jobs:
             curl -fsS http://127.0.0.1:5173/ >/dev/null
             docker image prune -f
           EOF
-
