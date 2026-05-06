@@ -58,7 +58,7 @@ async def import_mock_data(db: AsyncSession) -> dict:
         Cafe(name="Between Coffee ( Quán Cafe Ở Giữa )",
              address="1B Ngõ 6 Ao Sen, P. Mộ Lao, Hà Đông, Hà Nội 100000, Việt Nam",
              center_lat=20.982359491327195, center_lng=105.78793058834349, radius_meters=50, status="active"),
-        Cafe(name="Between Coffee ( Quán Cafe Ở Giữa )",
+        Cafe(name="T Coffee",
              address="Số 1G, Khu Dệt, P. Ao Sen, P. Mộ Lao, Hà Đông, Hà Nội, Việt Nam",
              center_lat=20.98298224221269, center_lng=105.78733641988076, radius_meters=50, status="active"),
         Cafe(name="Nhà Lành Art & Coffee",
