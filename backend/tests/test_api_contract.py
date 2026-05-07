@@ -1,12 +1,15 @@
 """Contract tests for API error status codes and response shape."""
 
 from uuid import uuid4
+import io
 
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
+from openpyxl import Workbook
 
 from app.dependencies import get_db
 from app.main import app
+from app.routers import report
 from app.services import session_service
 
 
@@ -131,3 +134,49 @@ def test_http_exception_handler_preserves_status_and_unwraps_detail(monkeypatch)
         "status": "error",
         "message": "session already ended",
     }
+
+
+def test_report_export_requires_internal_token(monkeypatch) -> None:
+    monkeypatch.setattr(report.settings, "REPORT_EXPORT_TOKEN", "secret")
+    client = _client()
+    try:
+        response = client.get("/api/report/export")
+    finally:
+        client.close()
+        _clear_overrides()
+
+    assert response.status_code == 401
+    assert response.json() == {
+        "status": "error",
+        "message": "unauthorized",
+    }
+
+
+def test_report_export_accepts_internal_token(monkeypatch) -> None:
+    output = io.BytesIO()
+    Workbook().save(output)
+    output_bytes = output.getvalue()
+
+    async def fake_generate_report(_db):
+        return io.BytesIO(output_bytes)
+
+    monkeypatch.setattr(report.settings, "REPORT_EXPORT_TOKEN", "secret")
+    monkeypatch.setattr(report.report_service, "generate_report", fake_generate_report)
+
+    client = _client()
+    try:
+        response = client.get(
+            "/api/report/export",
+            headers={"X-Internal-Token": "secret"},
+        )
+    finally:
+        client.close()
+        _clear_overrides()
+
+    assert response.status_code == 200
+    assert response.headers["content-disposition"] == (
+        'attachment; filename="studycafe_report.xlsx"'
+    )
+    assert response.headers["content-type"].startswith(
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
