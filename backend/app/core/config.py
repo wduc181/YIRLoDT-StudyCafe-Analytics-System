@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     # Google Places (optional)
     GOOGLE_PLACES_API_KEY: str = ""
 
+    # Internal endpoints
+    REPORT_EXPORT_TOKEN: str = ""
+
     @property
     def cors_origins_list(self) -> list[str]:
         """Parse CORS_ORIGINS thành list."""

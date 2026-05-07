@@ -47,7 +47,7 @@ Mục tiêu của tài liệu:
 | POST | `/api/session/end` | Kết thúc session | Đã implement |
 | GET | `/api/cafes` | Lấy danh sách quán; hỗ trợ khoảng cách/filter khi có GPS | Đã implement |
 | GET | `/api/session/{session_id}` | Xem thông tin session | Đã implement |
-| GET | `/api/report/export` | Xuất báo cáo Excel | Đã implement |
+| GET | `/api/report/export` | Xuất báo cáo Excel nội bộ | Đã implement |
 | POST | `/api/mock-data/import` | Nạp mock data để test | Đã implement |
 | POST | `/api/cafes/suggest` | Đề xuất thêm quán mới [Optional] | Planned/stub, chưa implement route |
 | POST | `/api/admin/cafes/{cafe_id}/approve` | Admin duyệt quán pending [Optional] | Planned/stub, chưa implement route |
@@ -317,7 +317,14 @@ Lấy chi tiết session để debug hoặc kiểm tra.
 ### 5.6 GET `/api/report/export`
 
 #### Mục đích
-Xuất báo cáo tổng hợp dưới dạng file Excel.
+Xuất báo cáo tổng hợp nội bộ dưới dạng file Excel. Endpoint giữ nguyên URL
+để phục vụ demo/slides, nhưng không public cho user bình thường và không còn
+được gọi từ frontend app.
+
+#### Header
+```http
+X-Internal-Token: <REPORT_EXPORT_TOKEN>
+```
 
 #### Response 200
 - File download `.xlsx`
@@ -325,6 +332,21 @@ Xuất báo cáo tổng hợp dưới dạng file Excel.
 
 ```http
 Content-Disposition: attachment; filename="studycafe_report.xlsx"
+```
+
+Workbook gồm 3 sheet:
+- `Sessions`: `session_id`, `device_id`, `cafe`, `start_time`, `end_time`,
+  `duration_min`, `gps_log_count`, `status`
+- `GPS Logs`: `session_id`, `timestamp`, `lat`, `lng`, `accuracy`, `cafe_id`
+- `Cafe Summary`: `cafe`, `total_sessions`, `avg_duration`,
+  `behavior_score`, `has_enough_data`
+
+#### Response 401
+```json
+{
+  "status": "error",
+  "message": "unauthorized"
+}
 ```
 
 ---
@@ -586,18 +608,21 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant Client as Client/Frontend
+    participant Client as Internal Client
     participant API as FastAPI Router
     participant SVC as Report Service
     participant DB as PostgreSQL
     participant XLSX as openpyxl
 
-    Client->>API: GET /api/report/export
+    Client->>API: GET /api/report/export<br/>X-Internal-Token
+    API->>API: Verify internal token
     API->>SVC: generate_report()
-    SVC->>DB: SELECT active cafes
-    DB-->>SVC: Cafe rows
-    SVC->>DB: SELECT latest cafe_scores
-    DB-->>SVC: Scores by cafe_id
+    SVC->>DB: SELECT sessions + gps counts
+    DB-->>SVC: Session rows
+    SVC->>DB: SELECT gps_logs
+    DB-->>SVC: GPS rows
+    SVC->>DB: SELECT active cafes + latest cafe_scores
+    DB-->>SVC: Cafe summary rows
     SVC->>XLSX: Generate workbook
     XLSX-->>SVC: BytesIO .xlsx stream
     SVC-->>API: StreamingResponse

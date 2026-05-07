@@ -250,7 +250,9 @@ Scoring Engine phải trả kết quả ở dạng có thể tích hợp lại v
 Hệ thống phải tính được các chỉ số tổng hợp theo từng quán.
 
 ### FR-D2 — Xuất Excel
-Hệ thống phải xuất được báo cáo dưới dạng file Excel.
+Hệ thống phải xuất được báo cáo nội bộ dưới dạng file Excel. Chức năng này
+phục vụ demo/đối chiếu dữ liệu, không hiển thị như tính năng public cho user
+bình thường.
 
 ### FR-D3 — Hiển thị trạng thái thiếu dữ liệu
 Nếu dữ liệu chưa đủ để đánh giá, hệ thống phải thể hiện rõ trạng thái “chưa đủ dữ liệu” thay vì đưa ra điểm sai lệch.
