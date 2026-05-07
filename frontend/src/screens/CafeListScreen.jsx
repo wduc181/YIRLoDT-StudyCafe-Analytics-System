@@ -22,9 +22,6 @@ export default function CafeListScreen({
   error,
   onFetchCafes,
   onGetCurrentPosition,
-  onExportCafes,
-  exporting,
-  exportError,
   onGoHome,
   onGoToSuggest,
 }) {
@@ -80,21 +77,10 @@ export default function CafeListScreen({
   return (
     <div className="flex-1 flex flex-col px-5 py-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 mb-4">
+      <div className="mb-4">
         <h2 className="text-lg font-bold text-white">
           Quán gần bạn nhất
         </h2>
-        <button
-          type="button"
-          onClick={onExportCafes}
-          disabled={exporting}
-          className="shrink-0 h-9 px-3 rounded-lg text-sm font-medium
-            text-brand-400 border border-brand-500/40 bg-brand-500/10
-            hover:border-brand-400 hover:text-brand-300
-            disabled:opacity-60 disabled:cursor-not-allowed transition-all"
-        >
-          {exporting ? "Đang xuất..." : "Xuất Excel"}
-        </button>
       </div>
 
       {hasLocation && (
@@ -133,12 +119,6 @@ export default function CafeListScreen({
           >
             Thử lại
           </button>
-        </div>
-      )}
-
-      {exportError && (
-        <div className="mb-4 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm animate-scale-in">
-          {exportError}
         </div>
       )}
 

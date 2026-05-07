@@ -99,24 +99,6 @@ export async function getCafes({ lat, lng, radius, minRadius, page, limit } = {}
   return request(query ? `/api/cafes?${query}` : "/api/cafes");
 }
 
-// ─── Report ──────────────────────────────────────
-
-function filenameFromContentDisposition(header) {
-  const match = header?.match(/filename="?([^"]+)"?/i);
-  return match?.[1] || "studycafe_report.xlsx";
-}
-
-/** GET /api/report/export */
-export async function exportReport() {
-  const response = await request("/api/report/export");
-  const blob = await response.blob();
-  const filename = filenameFromContentDisposition(
-    response.headers.get("content-disposition")
-  );
-
-  return { blob, filename };
-}
-
 // ─── Mock Data ───────────────────────────────────
 
 /** POST /api/mock-data/import */
